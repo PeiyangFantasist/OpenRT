@@ -124,6 +124,27 @@ test("a stale cache is explicitly marked after upstream failure", async () => {
   assert.equal(frameRemovals, 1);
 });
 
+test("a recently retained failed-update snapshot attempts a source refresh and clears stale metadata only after recovery", async () => {
+  const retained = { ...fixture(1), cacheStatus: "stale", warnings: ["定时更新失败：上游超时，保留最近有效快照。"] };
+  storage.set("openrt-fund-v1:000001", JSON.stringify({ version: 1, savedAt: Date.now(), data: retained }));
+  setGlobal("fetch", async () => new Response(JSON.stringify(retained)));
+  assert.equal(validateFundPayload(retained, "000001").cacheStatus, "stale");
+  assert.equal(validateFundPayload({ ...retained, cacheStatus: "source" }, "000001").cacheStatus, undefined);
+  sourceMode = "error";
+  const failed = await fetchFundClient("000001");
+  assert.equal(sourceLoads.length, 1, "a young snapshot flagged stale must not pass either cache freshness branch");
+  assert.equal(failed.cacheStatus, "stale");
+  assert.equal(failed.fetchedAt, retained.fetchedAt);
+  assert.ok(failed.warnings.some(warning => warning.startsWith("定时更新失败：")));
+  sourceMode = "success";
+  const recovered = await fetchFundClient("000001");
+  assert.equal(sourceLoads.length, 2);
+  assert.equal(recovered.cacheStatus, "source");
+  assert.ok(Date.parse(recovered.fetchedAt) > Date.parse(retained.fetchedAt));
+  assert.equal(recovered.warnings.some(warning => warning.startsWith("定时更新失败：")), false);
+  assert.equal(JSON.parse(storage.get("openrt-fund-v1:000001")!).data.cacheStatus, undefined);
+});
+
 test("source failure without validated cached data produces an actionable error", async () => {
   sourceMode = "error";
   storage.set("openrt-fund-v1:000001", "broken JSON");

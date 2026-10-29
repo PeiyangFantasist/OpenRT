@@ -77,6 +77,7 @@ export function validateFundPayload(input: unknown, code: string): FundData {
     warnings: [...value.warnings] as string[], qdii: value.qdii,
     ...(value.type !== undefined ? { type: value.type } : {}),
     ...(value.adjustmentEvents !== undefined ? { adjustmentEvents: value.adjustmentEvents } : {}),
+    ...(value.cacheStatus === "stale" ? { cacheStatus: "stale" } : {}),
   } as FundData;
 }
 
@@ -111,7 +112,7 @@ function writeBrowserCache(code: string, data: FundData): void {
 
 function withStatus(data: FundData, cacheStatus: FundCacheStatus, warning?: string): ClientFundData {
   return {
-    ...data, cacheStatus,
+    ...data, cacheStatus: data.cacheStatus === "stale" ? "stale" : cacheStatus,
     warnings: warning ? [...data.warnings, warning] : [...data.warnings],
   };
 }
@@ -213,12 +214,12 @@ export async function fetchFundClient(codeInput: string, options: FetchFundOptio
   const local = readBrowserCache(code);
   const basePath = options.basePath ?? defaultBasePath();
   const scheduled = await scheduledCache(code, basePath, Math.min(timeoutMs, 6000));
-  if (!options.forceRefresh && scheduled && age(scheduled) <= SCHEDULED_TTL) {
-    const newer = local && Date.parse(local.fetchedAt) > Date.parse(scheduled.fetchedAt) && age(local) <= BROWSER_TTL ? local : scheduled;
+  if (!options.forceRefresh && scheduled && scheduled.cacheStatus !== "stale" && age(scheduled) <= SCHEDULED_TTL) {
+    const newer = local && local.cacheStatus !== "stale" && Date.parse(local.fetchedAt) > Date.parse(scheduled.fetchedAt) && age(local) <= BROWSER_TTL ? local : scheduled;
     if (newer === scheduled) writeBrowserCache(code, scheduled);
     return withStatus(newer, newer === scheduled ? "scheduled-cache" : "browser-cache");
   }
-  if (!options.forceRefresh && local && age(local) <= BROWSER_TTL) {
+  if (!options.forceRefresh && local && local.cacheStatus !== "stale" && age(local) <= BROWSER_TTL) {
     return withStatus(local, "browser-cache");
   }
   try {

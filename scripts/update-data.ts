@@ -17,7 +17,20 @@ for (const code of [...new Set(codes)]) {
   try { await access(resolve(directory, `${code}.json`)); }
   catch { try { await copyFile(resolve("data/bootstrap", `${code}.json`), resolve(directory, `${code}.json`)); } catch { /* No bootstrap for this fund. */ } }
   try {
-    const data = await getFundData(code);
+    let data;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        data = await getFundData(code, { timeoutMs: 30_000 + attempt * 10_000 });
+        break;
+      } catch (error) {
+        const transient = error instanceof TypeError ||
+          (error instanceof Error && (error.name === "AbortError" || /aborted|timed out|HTTP (429|5\d\d)/i.test(error.message)));
+        if (!transient || attempt === 2) throw error;
+        console.warn(`${code}: temporary source error; retry ${attempt + 1}/2`);
+        await new Promise(resolve => setTimeout(resolve, 1200 * (attempt + 1)));
+      }
+    }
+    if (!data) throw new Error("Source did not return validated NAV data");
     const destination = resolve(directory, `${code}.json`);
     await writeFile(`${destination}.tmp`, JSON.stringify(data), "utf8");
     await rename(`${destination}.tmp`, destination);
@@ -29,6 +42,11 @@ for (const code of [...new Set(codes)]) {
     try {
       const prior = JSON.parse(await readFile(resolve(directory, `${code}.json`), "utf8"));
       if (prior.code !== code || !prior.points?.length || !prior.fetchedAt) throw new Error("Invalid old cache");
+      prior.cacheStatus = "stale";
+      prior.warnings = [...(Array.isArray(prior.warnings) ? prior.warnings.filter((item: unknown) => typeof item === "string" && !item.startsWith("定时更新失败：")) : []), `定时更新失败：${message}。当前保留抓取于 ${prior.fetchedAt} 的缓存，净值所属日期未改动。`];
+      const destination = resolve(directory, `${code}.json`);
+      await writeFile(`${destination}.tmp`, JSON.stringify(prior), "utf8");
+      await rename(`${destination}.tmp`, destination);
       results.push({ code, latestNavDate: prior.latestNavDate, status: "retained-stale", message });
       console.warn(`${code}: upstream failed; preserving previous cache (${message})`);
     } catch {
