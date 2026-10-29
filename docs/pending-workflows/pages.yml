@@ -1,0 +1,66 @@
+name: Update NAV cache and deploy OpenRT
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # Beijing time 09:20, 19:20 and 23:20, daily (including QDII late publication).
+    - cron: '20 1,11,15 * * *'
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: openrt-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Restore last valid NAV cache
+        uses: actions/cache/restore@v4
+        with:
+          path: public/data
+          key: openrt-nav-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: openrt-nav-v1-
+      - name: Test financial calculations and ingestion
+        run: npm test
+      - name: Check types
+        run: npm run typecheck
+      - name: Update source data (retain old data on outage)
+        id: refresh
+        continue-on-error: true
+        run: npm run update-data
+      - name: Require usable initial cache
+        run: node --input-type=module -e "import{readFile}from'node:fs/promises';const d=JSON.parse(await readFile('public/data/000001.json','utf8'));if(!d.points?.length)throw Error('No initial NAV cache');"
+      - name: Cache last valid source data
+        uses: actions/cache/save@v4
+        with:
+          path: public/data
+          key: openrt-nav-v1-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Build
+        run: npm run build:pages
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Report refresh outage
+        if: steps.refresh.outcome == 'failure'
+        run: echo '::warning::Some upstream data could not be refreshed; retained cached data is dated and the UI marks stale data.'
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

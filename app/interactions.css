@@ -1,0 +1,99 @@
+/* Local reflections add no layout space and leave existing button colors intact. */
+button {
+  position: relative;
+  isolation: isolate;
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --press-scale: 1;
+  transform: perspective(700px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) scale(var(--press-scale));
+  transform-origin: center;
+  transition: transform 190ms cubic-bezier(.2,.8,.2,1.1), background-color 180ms ease, color 160ms ease, border-color 180ms ease, box-shadow 190ms ease;
+}
+button::before,
+button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+button::before {
+  background: radial-gradient(110px circle at var(--pointer-x) var(--pointer-y), #ffffffa3 0%, #ffffff38 38%, #ffffff00 76%);
+}
+button::after {
+  box-shadow: inset 0 1px 0 #ffffffa6, inset 0 0 0 .7px #ffffff70;
+  background: linear-gradient(135deg, #ffffff17, #ffffff00 52%, #d3985b08);
+}
+button[data-reflect="true"]::before { opacity: .72; }
+button[data-reflect="true"]::after { opacity: .7; }
+button[data-pressed="true"] { --press-scale: .974; }
+button[data-pressed="true"]::before { opacity: .9; transition-duration: 120ms; }
+button[data-pressed="true"]::after { opacity: .95; transition-duration: 120ms; }
+button:focus-visible::after { opacity: .8; }
+button.icon-button::before,
+button.icon-button::after { border-radius: 8px; }
+button.text-button::before { opacity: 0; }
+button.text-button[data-reflect="true"]::before { opacity: .42; }
+button:disabled,
+button[aria-disabled="true"] { transform: none; }
+button:disabled::before,
+button:disabled::after,
+button[aria-disabled="true"]::before,
+button[aria-disabled="true"]::after { opacity: 0; }
+.main-nav button,
+.segmented-control button,
+.help-topic { transition: transform 190ms cubic-bezier(.2,.8,.2,1.1), background-color 200ms ease, color 170ms ease, box-shadow 200ms ease; }
+.stats-dialog[open]:not(.closing) {
+  animation: openrt-dialog-enter 200ms cubic-bezier(.2,.8,.2,1) both;
+  transform-origin: center;
+}
+.stats-dialog[open].closing {
+  animation: openrt-dialog-close 180ms ease both;
+  pointer-events: none;
+}
+.stats-dialog[open]:not(.closing)::backdrop { animation: openrt-backdrop-enter 200ms ease both; }
+.stats-dialog[open].closing::backdrop { animation: openrt-backdrop-close 180ms ease both; }
+.data-info-wrap > .data-popover {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-5px) scale(.985);
+  transform-origin: top right;
+  transition: opacity 180ms ease, transform 200ms cubic-bezier(.2,.8,.2,1), visibility 0s linear 200ms;
+}
+.data-info-wrap > .data-popover.open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+}
+@keyframes openrt-dialog-enter {
+  from { opacity: 0; transform: translateY(8px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes openrt-dialog-close {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(6px) scale(.985); }
+}
+@keyframes openrt-backdrop-enter {
+  from { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+  to { opacity: 1; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+}
+@keyframes openrt-backdrop-close {
+  from { opacity: 1; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  to { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  button { transform: none !important; transition: none !important; }
+  button::before,
+  button::after { display: none; transition: none !important; }
+  .stats-dialog[open],
+  .stats-dialog[open]::backdrop { animation: none !important; transform: none !important; }
+  .data-info-wrap > .data-popover { transform: none; transition: none; }
+}
