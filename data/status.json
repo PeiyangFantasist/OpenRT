@@ -1,0 +1,37 @@
+{
+  "attemptedAt": "2026-10-29T08:17:40.588Z",
+  "fresh": 6,
+  "missing": 0,
+  "results": [
+    {
+      "code": "000001",
+      "latestNavDate": "2026-10-28",
+      "status": "updated"
+    },
+    {
+      "code": "161725",
+      "latestNavDate": "2026-10-28",
+      "status": "updated"
+    },
+    {
+      "code": "019454",
+      "latestNavDate": "2026-10-28",
+      "status": "updated"
+    },
+    {
+      "code": "110011",
+      "latestNavDate": "2026-10-28",
+      "status": "updated"
+    },
+    {
+      "code": "005827",
+      "latestNavDate": "2026-10-28",
+      "status": "updated"
+    },
+    {
+      "code": "001632",
+      "latestNavDate": "2026-10-28",
+      "status": "updated"
+    }
+  ]
+}
