@@ -9,14 +9,13 @@ const MethodHelp = lazy(()=>import("./components/method-help").then(module=>({de
 import { InteractionEffects } from "./components/interactions";
 import { AnimatedDialog } from "./components/animated-dialog";
 import { QuickFunds } from "./components/quick-funds";
+import { ComparisonWorkspace } from "./components/comparison-workspace";
+import type { FundData } from "../lib/fund-data";
 import { beijingDate } from "../lib/calendar";
 
 type Tab = "rt" | "dca" | "help";
-type Fund = {
-  code: string; name: string; points: NavPoint[]; basis: string; source: string;
-  sourceUrl: string; fetchedAt: string; latestNavDate: string; warnings: string[];
-  qdii: boolean; cacheStatus?: string;
-};
+type Fund = FundData;
+
 type DCASettings = { investmentStart: string; investmentEnd: string; dailyAmount: number; settlementDate: string; purchaseFeeRate: number; redemptionFeeRate: number };
 const fmt = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 });
 const currency = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -40,6 +39,7 @@ function Metric({ label, value, note, accent=false }: {label:string;value:string
   return <div className={`metric ${accent ? "accent" : ""}`}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>;
 }
 export default function Home() {
+  const [compareMode,setCompareMode] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [today, setToday] = useState(()=>beijingDate());
   const lastToday = useRef(today);
@@ -83,10 +83,10 @@ export default function Home() {
     const readClock=()=>setToday(beijingDate());
     const clock=setInterval(readClock,30_000);
     const onVisible=()=>{if(document.visibilityState==="visible")readClock();};
-    const refresh=setInterval(()=>{if(document.visibilityState==="visible"&&loadedCode.current)void loadFund(loadedCode.current);},15*60_000);
+    const refresh=setInterval(()=>{if(document.visibilityState==="visible"&&!compareMode&&loadedCode.current)void loadFund(loadedCode.current);},15*60_000);
     document.addEventListener("visibilitychange",onVisible);
     return()=>{clearInterval(clock);clearInterval(refresh);document.removeEventListener("visibilitychange",onVisible);};
-  },[loadFund]);
+  },[loadFund,compareMode]);
   useEffect(()=>{if(lastToday.current!==today){lastToday.current=today;if(loadedCode.current)void loadFund(loadedCode.current,true);}},[today,loadFund]);
   const rt = useMemo(() => {
     if (!fund) return null;
@@ -105,8 +105,8 @@ export default function Home() {
   const navItems = [{id:"rt" as Tab,label:"RT-α",Icon:Activity},{id:"dca" as Tab,label:"每日定投",Icon:Wallet},{id:"help" as Tab,label:"算法与数据",Icon:BookOpen}];
   const renderStats = () => <aside className="stats-panel glass" aria-label="收益统计"><div className="panel-title"><h2>收益分布</h2><span>{fmt.format(stats?.count ?? 0)} 个窗口</span></div><Distribution values={(rt?.points ?? []).map(p=>p.return)}/><dl className="statistics">{[["最差",pct(stats?.min,true)],["最好",pct(stats?.max,true)],["P5",pct(stats?.p05,true)],["P95",pct(stats?.p95,true)],["P25",pct(stats?.p25,true)],["P75",pct(stats?.p75,true)],["样本标准差",pct(stats?.sd)],["正收益占比",pct(stats?.positiveProbability)]].map(([label,value])=><div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl><p className="panel-note">窗口有重叠；历史比例不代表未来概率。</p></aside>;
   return <div className="app-shell"><InteractionEffects/>
-    <header className="app-header"><Brand/><nav className="main-nav" aria-label="主要功能">{navItems.map(({id,label,Icon})=><button key={id} className={tab===id?"active":""} onClick={()=>{setTab(id);setDataInfo(false);}} aria-pressed={tab===id}><Icon size={16}/>{label}</button>)}</nav><a className="github-link" href="https://github.com/PeiyangFantasist/OpenRT" target="_blank" rel="noreferrer">GitHub <ExternalLink size={12}/></a></header>
-    <main id="main" className={`workspace view-${tab}`}>
+    <header className="app-header"><Brand/><nav className="main-nav" aria-label="主要功能">{navItems.map(({id,label,Icon})=><button key={id} className={tab===id?"active":""} onClick={()=>{setTab(id);setDataInfo(false);}} aria-pressed={tab===id}><Icon size={16}/>{label}</button>)}</nav><div className="header-actions"><button className={`compare-toggle ${compareMode?"active":""}`} aria-pressed={compareMode} onClick={()=>{setCompareMode(value=>!value);setDataInfo(false);}}>{compareMode?"返回单基金":"双基金对比"}</button><a className="github-link" href="https://github.com/PeiyangFantasist/OpenRT" target="_blank" rel="noreferrer">GitHub <ExternalLink size={12}/></a></div></header>
+    <main id="main" className={`workspace view-${tab} ${compareMode?"mode-compare":""}`}><div className="comparison-host" hidden={!(compareMode&&tab!=="help")}><ComparisonWorkspace active={compareMode&&tab!=="help"} tab={tab==="dca"?"dca":"rt"} today={today} initialFund={fund} initialAlpha={alpha} initialDca={dcaSettings}/></div><div className="single-workspace" hidden={compareMode&&tab!=="help"}>
       {tab!=="help" && <section className="fund-toolbar glass" aria-label="基金查询"><form className="fund-search" onSubmit={e=>{e.preventDefault();void loadFund(code);}}><Search size={16}/><input id="fund-code" aria-label="基金代码" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="6 位基金代码"/><button className="primary-button" disabled={loading}>{loading?<RefreshCw size={15} className="spin"/>:"查询"}</button></form><QuickFunds onSelect={next=>void loadFund(next)} selectedCode={fund?.code} disabled={loading}/>{fund&&!loading&&<><div className="fund-identity"><strong title={fund.name}>{fund.name}</strong><span>{fund.qdii?"QDII · ":""}{fund.points.length.toLocaleString()} 条净值 · {fund.points[0].date} 起</span></div><div className="calendar-status"><span>今日（北京）</span><time>{today}</time></div><div className="nav-value"><strong>{fund.points.at(-1)!.nav.toFixed(4)}</strong><span>净值日 {fund.latestNavDate}</span></div><button className="icon-button refresh-data" aria-label="刷新基金数据" title="重新读取官方数据" disabled={loading} onClick={()=>void loadFund(fund.code,true)}><RefreshCw size={15}/></button></>}</section>}
       {error&&tab!=="help"&&<div className="error-banner" role="alert"><AlertCircle size={15}/><span>{error}{fund?` 当前仍显示 ${fund.code} 的上次结果。`:""}</span><button onClick={()=>setError("")} aria-label="关闭错误提示">×</button></div>}
       {tab==="help"?<Suspense fallback={<section className="loading-panel glass" role="status">正在载入说明…</section>}><MethodHelp/></Suspense>:loading?<section className="loading-panel glass" role="status"><RefreshCw size={21} className="spin"/><p>正在读取历史净值…</p></section>:!fund?<section className="loading-panel glass"><p>请输入基金编号查询或快捷按键查看基金</p></section>:<>
@@ -124,7 +124,7 @@ export default function Home() {
       </>}
       <footer className="app-footer"><span><a href={fund.sourceUrl} target="_blank" rel="noreferrer">{fund.source}</a> · 净值日 {fund.latestNavDate}<span className="footer-fetch"> · 抓取 {new Date(fund.fetchedAt).toLocaleString("zh-CN",{timeZone:"Asia/Shanghai",hour12:false})}</span></span><span>{fund.qdii?"QDII 披露可能滞后 · ":""}历史数据，不构成投资建议</span><button className="text-button" onClick={()=>setTab("help")}>数据说明</button></footer>
       </>}
-    </main><AnimatedDialog open={statsOpen} onClose={()=>setStatsOpen(false)} title="统计分析">{renderStats()}</AnimatedDialog>{toast&&<div className="toast" role="status"><Check size={15}/>{toast}</div>}
+    </div></main><AnimatedDialog open={statsOpen} onClose={()=>setStatsOpen(false)} title="统计分析">{renderStats()}</AnimatedDialog>{toast&&<div className="toast" role="status"><Check size={15}/>{toast}</div>}
   </div>;
 }
 
