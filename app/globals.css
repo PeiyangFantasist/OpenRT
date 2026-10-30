@@ -460,3 +460,6 @@ svg { flex-shrink: 0; }
 @media (max-width: 350px) {
   .comparison-plan-fields { grid-template-columns: minmax(0,1fr); }
 }
+
+.quick-menu:not([open]) > .quick-funds { display: none; }
+.chart-subline { justify-content: flex-end; }

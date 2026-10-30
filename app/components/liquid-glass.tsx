@@ -22,7 +22,9 @@ export function LiquidGlassEffects() {
       // avoids repainting hidden <details> text through the library's DOM scanner.
       const backdrop = { color: dark ? "#000000" : "#ffffff" };
       const candidates = Array.from(document.querySelectorAll<HTMLElement>(".liquid-surface"))
-        .filter(element => element.isConnected && element.getClientRects().length > 0 && !element.closest("[hidden]"))
+        // Shader canvases extend beyond a pane for their rim and shadow. Native
+        // dialogs use the CSS material so that this padding cannot create scrollbars.
+        .filter(element => element.isConnected && element.getClientRects().length > 0 && !element.closest("[hidden], dialog"))
         .sort((a, b) => Number(b.dataset.glassPriority ?? 0) - Number(a.dataset.glassPriority ?? 0))
         .slice(0, 2);
       const selected = new Set(candidates);

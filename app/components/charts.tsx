@@ -196,7 +196,7 @@ export function Distribution({ values, palette = "a" }: { values: number[]; pale
       {selected !== null && selectedDensity !== null && <g><line x1={x(selected)} x2={x(selected)} y1={top} y2={baseline} stroke="var(--ink)" opacity=".4" strokeDasharray="4 4"/><circle cx={x(selected)} cy={y(selectedDensity)} r="4" fill={densityColor(selected)} stroke="var(--page)" strokeWidth="2"/></g>}
     </svg>
     {selected !== null && selectedDensity !== null && cumulative && <div id={`${id}-tooltip`} className="distribution-tooltip density-tooltip" role="tooltip" style={{ left: tooltipLeft, right: "auto", width: tooltipWidth, minWidth: 0, maxWidth: "calc(100% - 16px)" }}><strong>收益阈值 <b style={{ color: densityColor(selected) }}>{thresholdText(selected)}</b></strong><span>密度 / 1 个百分点 <b>{densityText(selectedDensity / 100)}</b></span><span>累计样本占比 <b>{percent(cumulative.probability)}</b></span><span>≤ 阈值窗口 <b>{cumulative.count} / {estimate.count}</b></span></div>}
-    <p className="density-note">高斯核平滑 · 曲线高度不是概率；尾部可能超出已观察收益。{estimate.constant && " 当前样本收益相同，宽度仅用于显示。"}</p>
+
     <span className="density-sr-only" aria-live="polite" aria-atomic="true">{focused.current && selected !== null && cumulative ? `收益阈值 ${thresholdText(selected)}，密度每一个百分点 ${densityText((selectedDensity ?? 0) / 100)}，历史累计占比 ${percent(cumulative.probability)}，${cumulative.count} / ${estimate.count} 个窗口。` : ""}</span>
   </div>;
 }
