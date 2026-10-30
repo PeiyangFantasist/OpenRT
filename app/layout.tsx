@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: "OpenRT",
   description: "Return Curve Advise for Individual Investors. 公募基金 RT-α 滚动持有收益分析与每日定投模拟，理解不同入场日期下的历史收益与风险。",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/brand-rt.png",
+    shortcut: "/brand-rt.png",
   },
 };
 

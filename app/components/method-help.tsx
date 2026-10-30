@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { MathFormula } from "./math";
 
 type HelpPage = {
@@ -119,10 +119,10 @@ const topics: HelpTopic[] = [
         label: "双基金对比", title: "双基金对比规则",
         paragraphs: [
           "仅取截至北京时间今日、两基金都有净值的日期交集，不插值补日。RT 使用同一 α、相同起止净值日；定投使用相同金额、日期与费率，在共同日期投入、结算。交集可能缩短历史、减少样本。",
-          "历史非正收益比例、样本标准差较低者，在该指标上标优；均值、中位数、分位数、末值、利润及收益率较高者标优。最差窗口较高表示历史低端收益更高；最好窗口较高仅说明历史上尾更高。",
-          "窗口数、成本、投入次数和费用保持中性。差异在数值容差内视为并列；缺失或无效数据没有胜者。红框与「優勝！」只表示按此规则赢了这一项，不构成整体投资推荐，也不证明未来风险更小。",
+          "历史非正收益比例、样本标准差较低者，在该指标上标记 WIN!；均值、中位数、分位数、末值、利润及收益率较高者标记 WIN!。最差窗口较高表示历史低端收益更高；最好窗口较高仅说明历史上尾更高。",
+          "窗口数、成本、投入次数和费用保持中性。差异在数值容差内视为并列；缺失或无效数据不作标记。主题色粗边框与左上角斜放的 “WIN!” 标记只表示按此规则得到较优项（A 为红色标记，B 为蓝色标记），不构成整体投资推荐，也不证明未来风险更小。",
         ],
-        note: "共同净值日期不代表当时都能成交；仍须核对复权口径与 QDII 披露时差。",
+        note: "A 用红 / 绿粗线，B 用蓝 / 黄细线，分别表示正 / 负收益；成本线保持主题色。共同日期不代表当时都能成交，仍须核对复权口径与 QDII 披露时差。",
       },
     ],
   },
@@ -271,8 +271,10 @@ const topics: HelpTopic[] = [
 ];
 
 export function MethodHelp() {
+  const contentRef=useRef<HTMLElement>(null);
   const [selected, setSelected] = useState(0);
   const [pageIndex, setPageIndex] = useState(0);
+  useEffect(()=>{if(contentRef.current)contentRef.current.scrollTop=0;},[selected,pageIndex]);
   const topic = topics[selected];
   const page = topic.pages[pageIndex];
 
@@ -287,7 +289,7 @@ export function MethodHelp() {
         onClick={() => { setSelected(index); setPageIndex(0); }}
       >{item.label}</button>)}
     </nav>
-    <article className="help-content" id="method-help-content" aria-labelledby="method-help-title">
+    <article ref={contentRef} className="help-content" id="method-help-content" aria-labelledby="method-help-title">
       <nav className="help-subtabs" aria-label={`${topic.label}小节`}>
         {topic.pages.map((item, index) => <button
           key={item.label}

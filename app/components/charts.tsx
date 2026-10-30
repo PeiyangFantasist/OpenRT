@@ -115,7 +115,10 @@ export function CurveChart({ points, money = false, label = "历史滚动持有�
   </div>;
 }
 
-export function Distribution({ values }: { values: number[] }) {
+export function Distribution({ values, palette = "a" }: { values: number[]; palette?: "a" | "b" }) {
+  const positive = palette === "b" ? "var(--compare-b-positive, #277bed)" : "var(--positive, #d9363e)";
+  const negative = palette === "b" ? "var(--compare-b-negative, #b38a00)" : "var(--negative, #168659)";
+  const densityColor = (value: number) => value > 0 ? positive : value < 0 ? negative : "var(--ink)";
   const estimate = useMemo(() => estimateDensity(values), [values]);
   const [activeValue, setActiveValue] = useState<number | null>(null);
   const [width, setWidth] = useState(640);
@@ -163,9 +166,9 @@ export function Distribution({ values }: { values: number[] }) {
     const value = domainMin + (pixel - left) / plotWidth * (domainMax - domainMin);
     setActiveValue(Math.abs(pixel - zeroX) <= 4 ? 0 : value);
   };
-  return <div className="density-chart" ref={hostRef}>
-    <div className="density-summary"><span><i className="density-negative"/>亏损率 <b>{percent(loss.probability)}</b></span><span><i className="density-positive"/>正收益占比 <b>{percent(1 - loss.probability)}</b></span></div>
-    <svg className="density-svg" viewBox={`0 0 ${width} ${height}`} style={{ height }} role="img" aria-label="历史收益的平滑概率密度曲线，零收益左侧绿色，右侧红色" aria-describedby={`${id}-instructions${selected !== null ? ` ${id}-tooltip` : ""}`} tabIndex={0}
+  return <div className={`density-chart density-chart--${palette}`} ref={hostRef}>
+    <div className="density-summary"><span><i className="density-negative" style={{ background: negative }}/>亏损率 <b>{percent(loss.probability)}</b></span><span><i className="density-positive" style={{ background: positive }}/>正收益占比 <b>{percent(1 - loss.probability)}</b></span></div>
+    <svg className="density-svg" viewBox={`0 0 ${width} ${height}`} style={{ height }} role="img" aria-label={`历史收益的平滑概率密度曲线，零收益左侧${palette === "b" ? "黄色" : "绿色"}，右侧${palette === "b" ? "蓝色" : "红色"}`} aria-describedby={`${id}-instructions${selected !== null ? ` ${id}-tooltip` : ""}`} tabIndex={0}
       onPointerMove={selectAtPointer} onPointerDown={event => { selectAtPointer(event); if (event.pointerType === "touch") event.currentTarget.focus({ preventScroll: true }); }}
       onPointerLeave={event => { if (event.pointerType !== "touch" && !focused.current) setActiveValue(null); }}
       onFocus={() => { focused.current = true; setActiveValue(current => current ?? 0); }} onBlur={() => { focused.current = false; setActiveValue(null); }}
@@ -187,12 +190,12 @@ export function Distribution({ values }: { values: number[] }) {
       {[0, 0.5, 1].map(fraction => <g key={fraction}><line x1={left} x2={width - right} y1={y(peak * fraction)} y2={y(peak * fraction)} className="chart-grid"/><text x={left - 8} y={y(peak * fraction) + 4} textAnchor="end" className="axis-label">{(peak * fraction / 100).toFixed(3)}</text></g>)}
       <text x={left} y={16} className="axis-label">密度 / 1 个百分点</text>
       <path d={area} fill={`url(#${id}-negative-fill)`} clipPath={`url(#${id}-negative)`}/><path d={area} fill={`url(#${id}-positive-fill)`} clipPath={`url(#${id}-positive)`}/>
-      <path d={curve} fill="none" stroke={negative} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" clipPath={`url(#${id}-negative)`} vectorEffect="non-scaling-stroke"/><path d={curve} fill="none" stroke={positive} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" clipPath={`url(#${id}-positive)`} vectorEffect="non-scaling-stroke"/>
+      <path d={curve} fill="none" stroke={negative} strokeWidth={palette === "b" ? 1.6 : 2.4} strokeLinecap="round" strokeLinejoin="round" clipPath={`url(#${id}-negative)`} vectorEffect="non-scaling-stroke"/><path d={curve} fill="none" stroke={positive} strokeWidth={palette === "b" ? 1.6 : 2.4} strokeLinecap="round" strokeLinejoin="round" clipPath={`url(#${id}-positive)`} vectorEffect="non-scaling-stroke"/>
       <line x1={zeroX} x2={zeroX} y1={top} y2={baseline} className="density-zero-line"/><text x={zeroX} y={height - 8} textAnchor="middle" className="density-zero-label">0%</text>
       {ticks.map((value, index) => <text key={value} x={x(value)} y={height - 8} textAnchor={index === 0 && value === domainMin ? "start" : value === domainMax ? "end" : "middle"} className="axis-label">{percent(value)}</text>)}
-      {selected !== null && selectedDensity !== null && <g><line x1={x(selected)} x2={x(selected)} y1={top} y2={baseline} stroke="var(--ink)" opacity=".4" strokeDasharray="4 4"/><circle cx={x(selected)} cy={y(selectedDensity)} r="4" fill={signColor(selected)} stroke="var(--page)" strokeWidth="2"/></g>}
+      {selected !== null && selectedDensity !== null && <g><line x1={x(selected)} x2={x(selected)} y1={top} y2={baseline} stroke="var(--ink)" opacity=".4" strokeDasharray="4 4"/><circle cx={x(selected)} cy={y(selectedDensity)} r="4" fill={densityColor(selected)} stroke="var(--page)" strokeWidth="2"/></g>}
     </svg>
-    {selected !== null && selectedDensity !== null && cumulative && <div id={`${id}-tooltip`} className="distribution-tooltip density-tooltip" role="tooltip" style={{ left: tooltipLeft, right: "auto", width: tooltipWidth, minWidth: 0, maxWidth: "calc(100% - 16px)" }}><strong>收益阈值 <b style={{ color: signColor(selected) }}>{thresholdText(selected)}</b></strong><span>密度 / 1 个百分点 <b>{densityText(selectedDensity / 100)}</b></span><span>累计样本占比 <b>{percent(cumulative.probability)}</b></span><span>≤ 阈值窗口 <b>{cumulative.count} / {estimate.count}</b></span></div>}
+    {selected !== null && selectedDensity !== null && cumulative && <div id={`${id}-tooltip`} className="distribution-tooltip density-tooltip" role="tooltip" style={{ left: tooltipLeft, right: "auto", width: tooltipWidth, minWidth: 0, maxWidth: "calc(100% - 16px)" }}><strong>收益阈值 <b style={{ color: densityColor(selected) }}>{thresholdText(selected)}</b></strong><span>密度 / 1 个百分点 <b>{densityText(selectedDensity / 100)}</b></span><span>累计样本占比 <b>{percent(cumulative.probability)}</b></span><span>≤ 阈值窗口 <b>{cumulative.count} / {estimate.count}</b></span></div>}
     <p className="density-note">高斯核平滑 · 曲线高度不是概率；尾部可能超出已观察收益。{estimate.constant && " 当前样本收益相同，宽度仅用于显示。"}</p>
     <span className="density-sr-only" aria-live="polite" aria-atomic="true">{focused.current && selected !== null && cumulative ? `收益阈值 ${thresholdText(selected)}，密度每一个百分点 ${densityText((selectedDensity ?? 0) / 100)}，历史累计占比 ${percent(cumulative.probability)}，${cumulative.count} / ${estimate.count} 个窗口。` : ""}</span>
   </div>;

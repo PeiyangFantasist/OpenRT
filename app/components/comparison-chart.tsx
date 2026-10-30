@@ -10,6 +10,10 @@ const compact = new Intl.NumberFormat("zh-CN", { notation: "compact", maximumFra
 const currency = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const POSITIVE = "var(--positive, #d9363e)";
 const NEGATIVE = "var(--negative, #168659)";
+const SERIES_COLORS = {
+  a: { positive: POSITIVE, negative: NEGATIVE },
+  b: { positive: "var(--compare-b-positive, #1976e9)", negative: "var(--compare-b-negative, #c69200)" },
+} as const;
 const COST = "var(--ink)";
 
 export function ComparisonChart({ points, labels, money = false }: ComparisonChartProps) {
@@ -49,10 +53,10 @@ export function ComparisonChart({ points, labels, money = false }: ComparisonCha
   const geometry = useMemo(() => {
     if (!data.length) return null;
     const { width, height } = size;
-    const left = width < 550 ? 50 : 65;
-    const right = 14;
-    const top = height < 210 ? 11 : 20;
-    const bottom = height < 210 ? 29 : 37;
+    const left = width < 550 ? 48 : 64;
+    const right = 16;
+    const top = height < 210 ? 16 : 24;
+    const bottom = height < 210 ? 32 : 40;
     const plotW = Math.max(1, width - left - right);
     const plotH = Math.max(1, height - top - bottom);
     let low = 0, high = 0;
@@ -118,7 +122,7 @@ export function ComparisonChart({ points, labels, money = false }: ComparisonCha
   const { width, height, left, right, top, bottom, plotW, plotH, x, y, xDate, timeSpan, firstTime } = geometry;
   const selected = hover === null ? null : Math.max(0, Math.min(data.length - 1, hover));
   const active = selected === null ? null : data[selected];
-  const color = (value: number, cost = 0) => value > cost ? POSITIVE : value < cost ? NEGATIVE : COST;
+  const color = (value: number, cost = 0, series: "a" | "b" = "a") => value > cost ? SERIES_COLORS[series].positive : value < cost ? SERIES_COLORS[series].negative : COST;
   const format = (value: number) => money ? currency.format(value) : `${value > 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
   const axisDate = (time: number) => {
     const date = new Date(time).toISOString().slice(0, 10);
@@ -152,7 +156,7 @@ export function ComparisonChart({ points, labels, money = false }: ComparisonCha
       preserveAspectRatio="none"
       style={{ flex: "1 1 0", minHeight: 0, width: "100%", height: "100%", touchAction: "pan-y" }}
       role="img"
-      aria-label={`两支基金${money ? "定投资产" : "滚动收益"}对比：A ${labels[0]}，B ${labels[1]}。A 为实线，B 为虚线。`}
+      aria-label={`两支基金${money ? "定投资产" : "滚动收益"}对比：A ${labels[0]}，B ${labels[1]}。A 为粗线，正收益红色、负收益绿色；B 为细线，正收益蓝色、负收益黄色。`}
       aria-describedby={`${id}-instructions${active ? ` ${id}-tooltip` : ""}`}
       tabIndex={0}
       onPointerMove={pointAtPointer}
@@ -173,10 +177,10 @@ export function ComparisonChart({ points, labels, money = false }: ComparisonCha
     >
       <desc id={`${id}-instructions`}>两支基金使用相同日期和纵轴比例。移动指针或轻触查看同日数值；聚焦后可用左右方向键浏览，Home、End 跳到首尾，Escape 关闭提示。</desc>
       <defs>
-        <linearGradient id={`${id}-signed`} gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={top} y2={top + plotH}>
-          <stop offset={`${geometry.zeroPercent}%`} stopColor={POSITIVE}/>
-          <stop offset={`${geometry.zeroPercent}%`} stopColor={NEGATIVE}/>
-        </linearGradient>
+        {(["a", "b"] as const).map(series => <linearGradient key={series} id={`${id}-signed-${series}`} gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={top} y2={top + plotH}>
+          <stop offset={`${geometry.zeroPercent}%`} stopColor={SERIES_COLORS[series].positive}/>
+          <stop offset={`${geometry.zeroPercent}%`} stopColor={SERIES_COLORS[series].negative}/>
+        </linearGradient>)}
         <clipPath id={`${id}-plot`}><rect x={left - 3} y={top - 3} width={plotW + 6} height={plotH + 6}/></clipPath>
       </defs>
       {geometry.ticks.map((value, index) => <g key={index}>
@@ -189,24 +193,24 @@ export function ComparisonChart({ points, labels, money = false }: ComparisonCha
       </g>}
       <g clipPath={`url(#${id}-plot)`}>
         {geometry.hasCost && <path d={geometry.pathCost} fill="none" stroke={COST} opacity=".4" strokeWidth="1.6" strokeDasharray="2 4" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>}
-        {geometry.moneyPaths ? (["a", "b"] as const).map(series => (["positive", "negative"] as const).map(sign => <path key={`${series}-${sign}`} d={geometry.moneyPaths![series][sign]} fill="none" stroke={sign === "positive" ? POSITIVE : NEGATIVE} strokeWidth="2.2" strokeDasharray={series === "b" ? "7 5" : undefined} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>)) : <><path d={geometry.pathA} fill="none" stroke={`url(#${id}-signed)`} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/><path d={geometry.pathB} fill="none" stroke={`url(#${id}-signed)`} strokeWidth="2.2" strokeDasharray="7 5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/></>}
+        {geometry.moneyPaths ? (["a", "b"] as const).map(series => (["positive", "negative"] as const).map(sign => <path key={`${series}-${sign}`} d={geometry.moneyPaths![series][sign]} fill="none" stroke={SERIES_COLORS[series][sign]} strokeWidth={series === "a" ? 3.2 : 1.7} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>)) : <><path d={geometry.pathA} fill="none" stroke={`url(#${id}-signed-a)`} strokeWidth="3.2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/><path d={geometry.pathB} fill="none" stroke={`url(#${id}-signed-b)`} strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/></>}
         {data.length === 1 && <>
-          <circle cx={x(0)} cy={y(data[0].a)} r="3" fill={color(data[0].a, money ? data[0].cost : 0)}/>
-          <circle cx={x(0)} cy={y(data[0].b)} r="5" fill="none" stroke={color(data[0].b, money ? data[0].cost : 0)} strokeWidth="2" strokeDasharray="2 2"/>
+          <circle cx={x(0)} cy={y(data[0].a)} r="5" fill={color(data[0].a, money ? data[0].cost : 0)}/>
+          <circle cx={x(0)} cy={y(data[0].b)} r="3.5" fill={color(data[0].b, money ? data[0].cost : 0, "b")} stroke="var(--page)" strokeWidth="1.5"/>
         </>}
       </g>
       {geometry.dateTicks.map((time, index) => <text key={time} x={xDate(time)} y={height - 13} textAnchor={geometry.dateTicks.length === 1 ? "middle" : index === 0 ? "start" : index === geometry.dateTicks.length - 1 ? "end" : "middle"} className="axis-label">{axisDate(time)}</text>)}
       {active && selected !== null && <g>
         <line x1={x(selected)} x2={x(selected)} y1={top} y2={height - bottom} stroke="var(--ink)" opacity=".4" strokeDasharray="4 4"/>
         {active.cost !== undefined && <circle cx={x(selected)} cy={y(active.cost)} r="3" fill={COST} stroke="var(--page)" strokeWidth="1.5"/>}
-        <circle cx={x(selected)} cy={y(active.a)} r="4" fill={color(active.a, money ? active.cost : 0)} stroke="var(--page)" strokeWidth="2"/>
-        <circle cx={x(selected)} cy={y(active.b)} r="5.5" fill="none" stroke={color(active.b, money ? active.cost : 0)} strokeWidth="2" strokeDasharray="3 2"/>
+        <circle cx={x(selected)} cy={y(active.a)} r="5" fill={color(active.a, money ? active.cost : 0)} stroke="var(--page)" strokeWidth="2"/>
+        <circle cx={x(selected)} cy={y(active.b)} r="3.5" fill={color(active.b, money ? active.cost : 0, "b")} stroke="var(--page)" strokeWidth="1.5"/>
       </g>}
     </svg>
     {active && <div id={`${id}-tooltip`} className="chart-tooltip" role="tooltip" style={{ left: tooltipLeft, width: tooltipWidth, maxWidth: "calc(100% - 16px)", minWidth: 0, maxHeight: "calc(100% - 16px)", overflow: "hidden" }}>
       <strong>{active.date}</strong>
       <span style={{ gap: 8 }}><span style={nameStyle} title={labels[0]}>A · {labels[0]}</span><b style={{ color: color(active.a, money ? active.cost : 0), flexShrink: 0 }}>{format(active.a)}</b></span>
-      <span style={{ gap: 8 }}><span style={nameStyle} title={labels[1]}>B · {labels[1]}</span><b style={{ color: color(active.b, money ? active.cost : 0), flexShrink: 0 }}>{format(active.b)}</b></span>
+      <span style={{ gap: 8 }}><span style={nameStyle} title={labels[1]}>B · {labels[1]}</span><b style={{ color: color(active.b, money ? active.cost : 0, "b"), flexShrink: 0 }}>{format(active.b)}</b></span>
       {active.cost !== undefined && <span style={{ gap: 8 }}><span style={nameStyle}>累计投入</span><b style={{ color: "var(--ink)", flexShrink: 0 }}>{format(active.cost)}</b></span>}
       {active.detail && <small style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{active.detail}</small>}
     </div>}

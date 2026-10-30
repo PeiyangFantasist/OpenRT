@@ -13,4 +13,8 @@ class AppBoundary extends React.Component<React.PropsWithChildren, { failed: boo
   }
 }
 
-createRoot(document.getElementById("root")!).render(<AppBoundary><Home /></AppBoundary>);
+const root = createRoot(document.getElementById("root")!);
+root.render(<AppBoundary><Home /></AppBoundary>);
+// Dispose the old tree before Vite replaces this entry during local previews.
+const hot = (import.meta as ImportMeta & { hot?: { dispose(callback: () => void): void } }).hot;
+hot?.dispose(() => root.unmount());

@@ -37,10 +37,11 @@ svg { flex-shrink: 0; }
 .app-shell { height: 100dvh; display: flex; flex-direction: column; background: var(--page); color: var(--ink); transition: background-color 240ms, color 240ms; }
 .app-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 24px 16px; flex-shrink: 0; }
 .brand { display: flex; align-items: center; gap: 16px; min-width: 0; }
-.brand-icon { width: 40px; height: 40px; overflow: visible; }
+.brand-icon { display: block; flex-shrink: 0; width: 56px; height: 40px; background: var(--ink); -webkit-mask: url("/brand-rt.png") center / 100px 100px no-repeat; mask: url("/brand-rt.png") center / 100px 100px no-repeat; mask-mode: luminance; }
+.brand-text { min-width: 0; }
 .brand-text > strong { display: block; font-size: 32px; font-weight: 500; line-height: 1; letter-spacing: -1.6px; }
 .brand-text em { font-weight: 850; }
-.brand-text > small { display: block; margin-top: 8px; font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: -.3px; line-height: 1.4; color: var(--ink); opacity: .6; }
+.brand-text > small { display: block; margin-top: 8px; font-family: "JetBrains Mono", monospace; font-size: 14px; letter-spacing: -.3px; line-height: 1.4; color: var(--ink); opacity: .6; }
 .header-actions { display: flex; align-items: center; gap: 16px; }
 .header-date { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; }
 .header-date small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
@@ -60,7 +61,7 @@ svg { flex-shrink: 0; }
 .fund-identity strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
 .fund-identity > span { display: block; margin-top: 4px; font-size: 11px; color: var(--muted); }
 .nav-value { text-align: right; font-variant-numeric: tabular-nums; }
-.nav-value strong { display: block; font-size: 20px; font-weight: 550; letter-spacing: -.6px; }
+.nav-value strong { display: block; font-size: 20px; font-weight: 800; letter-spacing: -.6px; }
 .nav-value span { display: block; margin-top: 4px; font-size: 10px; color: var(--muted); }
 .quick-menu { position: relative; flex-shrink: 0; }
 .quick-menu > summary { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; padding: 8px; list-style: none; }
@@ -121,7 +122,7 @@ svg { flex-shrink: 0; }
 .chart-tooltip { top: 16px; }
 .chart-tooltip > strong, .distribution-tooltip > strong { display: block; margin-bottom: 8px; font-size: 12px; color: var(--ink); }
 .chart-tooltip > span, .distribution-tooltip > span { display: flex; justify-content: space-between; gap: 24px; line-height: 1.8; }
-.chart-tooltip b, .distribution-tooltip b { font-weight: 600; }
+.chart-tooltip b, .distribution-tooltip b { font-weight: 750; }
 .chart-tooltip small { display: block; margin-top: 8px; font-size: 10px; color: var(--muted); }
 .chart-empty { display: flex; align-items: center; justify-content: center; flex-direction: column; width: 100%; gap: 16px; color: var(--muted); font-size: 12px; text-align: center; }
 .empty-orbit { font: italic 40px Georgia; opacity: .4; }
@@ -129,7 +130,7 @@ svg { flex-shrink: 0; }
 .metric { padding: 16px 24px; border-right: 1px solid var(--line); min-width: 0; }
 .metric:last-child { border-right: 0; }
 .metric > span { display: block; font-size: 11px; color: var(--muted); }
-.metric strong { display: block; font-size: clamp(22px, 2.6vw, 36px); font-weight: 550; letter-spacing: -1.2px; line-height: 1.2; margin: 8px 0; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ink); }
+.metric strong { display: block; font-size: clamp(22px, 2.6vw, 36px); font-weight: 800; letter-spacing: -1.2px; line-height: 1.2; margin: 8px 0; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ink); }
 .metric small { display: block; font-size: 10px; color: var(--muted); white-space: nowrap; }
 .positive-value { color: var(--positive) !important; }
 .negative-value { color: var(--negative) !important; }
@@ -221,9 +222,9 @@ svg { flex-shrink: 0; }
 @media (max-width: 760px) {
   .app-header { gap: 8px; padding: 16px 16px 8px; }
   .brand { gap: 8px; }
-  .brand-icon { width: 28px; height: 28px; }
+  .brand-icon { width: 36px; height: 32px; -webkit-mask-size: 64px 64px; mask-size: 64px 64px; }
   .brand-text > strong { font-size: 26px; letter-spacing: -1.2px; }
-  .brand-text > small { font-size: 7px; letter-spacing: -.2px; max-width: 260px; margin-top: 4px; }
+  .brand-text > small { font-size: 9px; letter-spacing: -.3px; max-width: min(260px, calc(100vw - 116px)); margin-top: 4px; }
   .header-actions { gap: 4px; }
   .header-date, .github-link { display: none; }
   .theme-toggle { width: 32px; height: 32px; padding: 4px; }
@@ -335,7 +336,7 @@ svg { flex-shrink: 0; }
 }
 @media (max-width: 380px) {
   .workspace { padding-left: 8px; padding-right: 8px; }
-  .brand-text > small { font-size: 6.5px; }
+  .brand-text > small { font-size: 9px; }
   .metric { padding: 8px 4px; }
   .metric > span { font-size: 8px; }
   .metric small { font-size: 6px; }
@@ -352,4 +353,110 @@ svg { flex-shrink: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+.workspace .comparison-plan-summary strong { font-weight: 800; }
+
+@media (min-width: 481px) and (max-width: 760px) { .brand-text > small { font-size: 11px; max-width: none; } }
+
+/* Brief metrics; their explanations stay behind an explicit information button. */
+.metric { position: relative; }
+.metric > span { padding-right: 24px; }
+.metric-info { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 24px; height: 24px; padding: 4px; border-radius: 50%; color: var(--muted); }
+.metric-info:hover { background: var(--hover); color: var(--ink); }
+.metric-explanation { font-size: 14px; line-height: 1.8; }
+.single-plan-toolbar { display: flex; align-items: center; gap: 16px; min-height: 40px; flex-shrink: 0; }
+.single-plan-toolbar > div { display: flex; align-items: center; gap: 16px; min-width: 0; font-size: 11px; }
+.single-plan-toolbar strong { font-size: 12px; font-weight: 800; white-space: nowrap; }
+.single-plan-toolbar span { color: var(--muted); font-size: 10px; }
+.plan-settlement { margin-left: auto; }
+.dca-plan-editor { display: flex; flex-direction: column; padding: 0; border: 0; gap: 16px; background: transparent; }
+.dca-plan-editor .dca-fields { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; }
+.dca-plan-editor .advanced-settings { position: relative; width: auto; margin: 0; padding: 0; min-height: 0; }
+.dca-plan-editor .advanced-fields { position: static; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); width: 100%; max-width: none; margin-top: 8px; padding: 16px; }
+.dca-plan-editor .advanced-fields > label { min-width: 0; max-width: none; }
+.dca-plan-editor .calculate-button { position: static; align-self: flex-end; width: auto; min-width: 104px; height: 40px; min-height: 40px; }
+@media (max-width: 760px) {
+  .workspace { padding: 8px 16px 0; }
+  .single-workspace { gap: 8px; }
+  .brand-text > small { max-width: min(260px, calc(100vw - 124px)); }
+  .theme-toggle { width: 40px; height: 40px; padding: 8px; }
+  .fund-search input { font-size: 16px; }
+  .search-surface .primary-button { min-width: 40px; min-height: 40px; width: 40px; }
+  .fund-identity strong { max-width: 52%; }
+  .fund-toolbar > .refresh-data { width: 32px; height: 32px; bottom: 0; padding: 8px; }
+  .fund-identity { right: 40px; min-height: 32px; }
+  .fund-identity > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .metric > span { padding-right: 16px; line-height: 1.4; }
+  .metric-info { top: 4px; right: 4px; }
+  .metric strong { margin-bottom: 0; }
+  .metric small { display: none; }
+  .dca-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .dca-metrics .metric { padding: 8px 16px; border-bottom: 1px solid var(--line); }
+  .dca-metrics .metric:nth-child(2) { border-right: 0; }
+  .dca-metrics .metric:nth-child(n+3) { border-bottom: 0; }
+  .dca-metrics .metric strong { font-size: 20px; letter-spacing: -.5px; }
+  .dca-metrics .metric > span { font-size: 10px; }
+  .single-plan-toolbar { gap: 8px; min-height: 32px; }
+  .single-plan-toolbar > div { flex-direction: column; align-items: flex-start; gap: 4px; overflow: hidden; }
+  .single-plan-toolbar strong { font-size: 11px; }
+  .single-plan-toolbar span { font-size: 9px; white-space: nowrap; }
+  .single-plan-toolbar .plan-settlement { display: none; }
+  .dca-plan-editor .dca-fields input, .dca-plan-editor .advanced-fields input, .quick-row input { font-size: 16px; height: 40px; min-height: 40px; }
+  .dca-plan-editor .dca-fields label, .dca-plan-editor .advanced-fields label { font-size: 12px; }
+  .dca-plan-editor .calculate-button { width: 100%; font-size: 13px; }
+  .custom-alpha { min-height: 40px; }
+  .custom-alpha input { font-size: 16px; width: 32px; }
+  .custom-alpha button { width: 24px; height: 32px; padding: 4px; }
+  .segmented-control button { min-height: 32px; font-size: 10px; }
+  .data-info-wrap > .text-button { width: 24px; height: 40px; justify-content: center; padding: 4px; }
+  .secondary-button { min-height: 32px; }
+  .chart-subline > span:first-child { display: none; }
+  .chart-subline { justify-content: flex-end; min-height: 24px; }
+  .chart-meta { font-size: 9px; }
+  .app-footer, .app-footer .text-button { font-size: 8px; min-height: 24px; }
+  .app-footer > span:first-child { min-width: 0; flex: 1; }
+  .app-footer .text-button { width: 32px; height: 32px; justify-content: center; }
+  .dialog-heading button { width: 40px; height: 40px; flex-shrink: 0; }
+  .stats-dialog { max-height: calc(100dvh - 32px); overscroll-behavior: contain; }
+  .quick-row { grid-template-columns: minmax(80px,.7fr) minmax(0,1fr) 32px; }
+  .quick-row > button { width: 32px; height: 40px; }
+  .quick-save-row button { min-height: 40px; }
+  .help-content p { font-size: 12px; }
+  .help-variables, .help-note, .help-example { font-size: 11px !important; }
+  .help-topic, .help-subtabs button, .help-pager button { min-height: 32px; }
+}
+@media (max-width: 380px) {
+  .workspace { padding-left: 8px; padding-right: 8px; }
+  .metric { padding: 8px; }
+  .metric > span { font-size: 9px; }
+  .metric strong { font-size: 20px; }
+  .dca-metrics .metric { padding: 8px; }
+  .dca-metrics .metric strong { font-size: 18px; }
+  .segmented-control button { font-size: 9px; padding-left: 0; padding-right: 0; }
+  .custom-alpha { gap: 0; padding: 4px; }
+  .custom-alpha input { width: 28px; }
+}
+@media (max-width: 350px) {
+  .dca-plan-editor .dca-fields { grid-template-columns: minmax(0,1fr); gap: 8px; }
+  .metric strong { font-size: 18px; letter-spacing: -.8px; }
+  .metric > span { font-size: 8px; }
+}
+
+.metric > span { font-size: 14px; font-weight: 750; color: var(--ink); }
+.cmp-metric-heading, .cmp-metrics--compact .cmp-metric-heading { font-size: 14px; font-weight: 750; }
+@media (max-width: 760px) {
+  .metric > span, .dca-metrics .metric > span { font-size: 12px; font-weight: 750; }
+  .cmp-metric-heading, .cmp-metrics--compact .cmp-metric-heading { font-size: 12px; font-weight: 750; }
+}
+@media (max-width: 350px) {
+  .metric > span, .dca-metrics .metric > span { font-size: 10px; }
+}
+
+@media (max-width: 760px) {
+  .comparison-workspace .fund-search input, .comparison-plan-fields input { font-size: 16px; }
+  .custom-alpha input { width: 40px; }
+}
+@media (max-width: 350px) {
+  .comparison-plan-fields { grid-template-columns: minmax(0,1fr); }
 }
