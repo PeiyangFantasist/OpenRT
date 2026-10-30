@@ -8,11 +8,9 @@ const DAY = 86_400_000;
 const integer = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 });
 const compact = new Intl.NumberFormat("zh-CN", { notation: "compact", maximumFractionDigits: 1 });
 const currency = new Intl.NumberFormat("zh-CN", { style: "currency", currency: "CNY", minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const POSITIVE = "#cc584d";
-const NEGATIVE = "#36866d";
-const MONEY_A = "#d97732";
-const MONEY_B = "#9b86ac";
-const COST = "#b3aaa0";
+const POSITIVE = "var(--positive, #d9363e)";
+const NEGATIVE = "var(--negative, #168659)";
+const COST = "var(--ink)";
 
 export function ComparisonChart({ points, labels, money = false }: ComparisonChartProps) {
   const chartRef = useRef<HTMLDivElement>(null);
@@ -80,6 +78,28 @@ export function ComparisonChart({ points, labels, money = false }: ComparisonCha
         return `${command}${x(index).toFixed(2)},${y(value).toFixed(2)}`;
       }).join(" ");
     };
+    const signedPaths = (field: "a" | "b") => {
+      const result = { positive: "", negative: "" };
+      const key = (difference: number) => difference > 0 ? "positive" as const : "negative" as const;
+      let previousKey = key(data[0][field] - (data[0].cost ?? 0));
+      result[previousKey] = `M${x(0)},${y(data[0][field])}`;
+      for (let index = 1; index < data.length; index++) {
+        const before = data[index - 1], point = data[index];
+        const beforeDifference = before[field] - (before.cost ?? 0);
+        const difference = point[field] - (point.cost ?? 0);
+        const currentKey = key(difference);
+        if (currentKey !== previousKey) {
+          const fraction = beforeDifference / (beforeDifference - difference);
+          const crossX = x(index - 1) + (x(index) - x(index - 1)) * fraction;
+          const crossY = y(before[field] + (point[field] - before[field]) * fraction);
+          result[previousKey] += ` L${crossX},${crossY}`;
+          result[currentKey] += ` M${crossX},${crossY}`;
+        }
+        result[currentKey] += ` L${x(index)},${y(point[field])}`;
+        previousKey = currentKey;
+      }
+      return result;
+    };
     const tickCount = height < 210 ? 3 : 5;
     const ticks = Array.from({ length: tickCount }, (_, index) => high - index / (tickCount - 1) * (high - low));
     const dateCount = width < 420 ? 2 : width < 700 ? 3 : 4;
@@ -88,6 +108,7 @@ export function ComparisonChart({ points, labels, money = false }: ComparisonCha
       width, height, left, right, top, bottom, plotW, plotH, y, x, xDate,
       firstTime, timeSpan, ticks, dateTicks,
       pathA: path("a"), pathB: path("b"), pathCost: path("cost"),
+      moneyPaths: money ? { a: signedPaths("a"), b: signedPaths("b") } : null,
       hasCost: data.some(point => point.cost !== undefined),
       zeroY: y(0), zeroPercent: Math.max(0, Math.min(100, (y(0) - top) / plotH * 100)),
     };
@@ -97,7 +118,7 @@ export function ComparisonChart({ points, labels, money = false }: ComparisonCha
   const { width, height, left, right, top, bottom, plotW, plotH, x, y, xDate, timeSpan, firstTime } = geometry;
   const selected = hover === null ? null : Math.max(0, Math.min(data.length - 1, hover));
   const active = selected === null ? null : data[selected];
-  const color = (value: number, series: "a" | "b") => money ? (series === "a" ? MONEY_A : MONEY_B) : value > 0 ? POSITIVE : NEGATIVE;
+  const color = (value: number, cost = 0) => value > cost ? POSITIVE : value < cost ? NEGATIVE : COST;
   const format = (value: number) => money ? currency.format(value) : `${value > 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
   const axisDate = (time: number) => {
     const date = new Date(time).toISOString().slice(0, 10);
@@ -167,27 +188,26 @@ export function ComparisonChart({ points, labels, money = false }: ComparisonCha
         <text x={width - right - 4} y={geometry.zeroY - 7} textAnchor="end" className="zero-label">盈亏平衡</text>
       </g>}
       <g clipPath={`url(#${id}-plot)`}>
-        {geometry.hasCost && <path d={geometry.pathCost} fill="none" stroke={COST} strokeWidth="1.6" strokeDasharray="2 4" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>}
-        <path d={geometry.pathA} fill="none" stroke={money ? MONEY_A : `url(#${id}-signed)`} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
-        <path d={geometry.pathB} fill="none" stroke={money ? MONEY_B : `url(#${id}-signed)`} strokeWidth="2.2" strokeDasharray="7 5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+        {geometry.hasCost && <path d={geometry.pathCost} fill="none" stroke={COST} opacity=".4" strokeWidth="1.6" strokeDasharray="2 4" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>}
+        {geometry.moneyPaths ? (["a", "b"] as const).map(series => (["positive", "negative"] as const).map(sign => <path key={`${series}-${sign}`} d={geometry.moneyPaths![series][sign]} fill="none" stroke={sign === "positive" ? POSITIVE : NEGATIVE} strokeWidth="2.2" strokeDasharray={series === "b" ? "7 5" : undefined} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>)) : <><path d={geometry.pathA} fill="none" stroke={`url(#${id}-signed)`} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/><path d={geometry.pathB} fill="none" stroke={`url(#${id}-signed)`} strokeWidth="2.2" strokeDasharray="7 5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/></>}
         {data.length === 1 && <>
-          <circle cx={x(0)} cy={y(data[0].a)} r="3" fill={color(data[0].a, "a")}/>
-          <circle cx={x(0)} cy={y(data[0].b)} r="5" fill="none" stroke={color(data[0].b, "b")} strokeWidth="2" strokeDasharray="2 2"/>
+          <circle cx={x(0)} cy={y(data[0].a)} r="3" fill={color(data[0].a, money ? data[0].cost : 0)}/>
+          <circle cx={x(0)} cy={y(data[0].b)} r="5" fill="none" stroke={color(data[0].b, money ? data[0].cost : 0)} strokeWidth="2" strokeDasharray="2 2"/>
         </>}
       </g>
       {geometry.dateTicks.map((time, index) => <text key={time} x={xDate(time)} y={height - 13} textAnchor={geometry.dateTicks.length === 1 ? "middle" : index === 0 ? "start" : index === geometry.dateTicks.length - 1 ? "end" : "middle"} className="axis-label">{axisDate(time)}</text>)}
       {active && selected !== null && <g>
-        <line x1={x(selected)} x2={x(selected)} y1={top} y2={height - bottom} stroke="#8b8179" strokeDasharray="4 4"/>
-        {active.cost !== undefined && <circle cx={x(selected)} cy={y(active.cost)} r="3" fill={COST} stroke="white" strokeWidth="1.5"/>}
-        <circle cx={x(selected)} cy={y(active.a)} r="4" fill={color(active.a, "a")} stroke="white" strokeWidth="2"/>
-        <circle cx={x(selected)} cy={y(active.b)} r="5.5" fill="none" stroke={color(active.b, "b")} strokeWidth="2" strokeDasharray="3 2"/>
+        <line x1={x(selected)} x2={x(selected)} y1={top} y2={height - bottom} stroke="var(--ink)" opacity=".4" strokeDasharray="4 4"/>
+        {active.cost !== undefined && <circle cx={x(selected)} cy={y(active.cost)} r="3" fill={COST} stroke="var(--page)" strokeWidth="1.5"/>}
+        <circle cx={x(selected)} cy={y(active.a)} r="4" fill={color(active.a, money ? active.cost : 0)} stroke="var(--page)" strokeWidth="2"/>
+        <circle cx={x(selected)} cy={y(active.b)} r="5.5" fill="none" stroke={color(active.b, money ? active.cost : 0)} strokeWidth="2" strokeDasharray="3 2"/>
       </g>}
     </svg>
     {active && <div id={`${id}-tooltip`} className="chart-tooltip" role="tooltip" style={{ left: tooltipLeft, width: tooltipWidth, maxWidth: "calc(100% - 16px)", minWidth: 0, maxHeight: "calc(100% - 16px)", overflow: "hidden" }}>
       <strong>{active.date}</strong>
-      <span style={{ gap: 8 }}><span style={nameStyle} title={labels[0]}>A · {labels[0]}</span><b style={{ color: color(active.a, "a"), flexShrink: 0 }}>{format(active.a)}</b></span>
-      <span style={{ gap: 8 }}><span style={nameStyle} title={labels[1]}>B · {labels[1]}</span><b style={{ color: color(active.b, "b"), flexShrink: 0 }}>{format(active.b)}</b></span>
-      {active.cost !== undefined && <span style={{ gap: 8 }}><span style={nameStyle}>累计投入</span><b style={{ color: "#978d83", flexShrink: 0 }}>{format(active.cost)}</b></span>}
+      <span style={{ gap: 8 }}><span style={nameStyle} title={labels[0]}>A · {labels[0]}</span><b style={{ color: color(active.a, money ? active.cost : 0), flexShrink: 0 }}>{format(active.a)}</b></span>
+      <span style={{ gap: 8 }}><span style={nameStyle} title={labels[1]}>B · {labels[1]}</span><b style={{ color: color(active.b, money ? active.cost : 0), flexShrink: 0 }}>{format(active.b)}</b></span>
+      {active.cost !== undefined && <span style={{ gap: 8 }}><span style={nameStyle}>累计投入</span><b style={{ color: "var(--ink)", flexShrink: 0 }}>{format(active.cost)}</b></span>}
       {active.detail && <small style={{ overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{active.detail}</small>}
     </div>}
     <span aria-live="polite" aria-atomic="true" style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clipPath: "inset(50%)", whiteSpace: "nowrap", border: 0 }}>{focused.current ? activeDescription : ""}</span>

@@ -1,4 +1,4 @@
-/* Local reflections add no layout space and leave existing button colors intact. */
+/* Reflections follow interpolated pointer positions, without React updates. */
 button {
   position: relative;
   isolation: isolate;
@@ -9,7 +9,7 @@ button {
   --press-scale: 1;
   transform: perspective(700px) rotateX(var(--tilt-x)) rotateY(var(--tilt-y)) scale(var(--press-scale));
   transform-origin: center;
-  transition: transform 190ms cubic-bezier(.2,.8,.2,1.1), background-color 180ms ease, color 160ms ease, border-color 180ms ease, box-shadow 190ms ease;
+  transition: transform 240ms cubic-bezier(.2,.8,.2,1.1), background-color 200ms ease, color 160ms ease, border-color 200ms ease, box-shadow 240ms ease;
 }
 button::before,
 button::after {
@@ -23,15 +23,15 @@ button::after {
   transition: opacity 200ms ease;
 }
 button::before {
-  background: radial-gradient(110px circle at var(--pointer-x) var(--pointer-y), #ffffffa3 0%, #ffffff38 38%, #ffffff00 76%);
+  background: radial-gradient(120px circle at var(--pointer-x) var(--pointer-y), #ffffffa3 0%, #ffffff38 38%, #ffffff00 76%);
 }
 button::after {
   box-shadow: inset 0 1px 0 #ffffffa6, inset 0 0 0 .7px #ffffff70;
-  background: linear-gradient(135deg, #ffffff17, #ffffff00 52%, #d3985b08);
+  background: linear-gradient(135deg, #ffffff24, #ffffff00 52%, #ffffff08);
 }
 button[data-reflect="true"]::before { opacity: .72; }
 button[data-reflect="true"]::after { opacity: .7; }
-button[data-pressed="true"] { --press-scale: .974; }
+button[data-pressed="true"] { --press-scale: .96; }
 button[data-pressed="true"]::before { opacity: .9; transition-duration: 120ms; }
 button[data-pressed="true"]::after { opacity: .95; transition-duration: 120ms; }
 button:focus-visible::after { opacity: .8; }
@@ -48,6 +48,29 @@ button[aria-disabled="true"]::after { opacity: 0; }
 .main-nav button,
 .segmented-control button,
 .help-topic { transition: transform 190ms cubic-bezier(.2,.8,.2,1.1), background-color 200ms ease, color 170ms ease, box-shadow 200ms ease; }
+.liquid-surface {
+  isolation: isolate;
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+}
+.liquid-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  background: radial-gradient(240px circle at var(--pointer-x) var(--pointer-y), #ffffff54, #ffffff10 48%, transparent 80%);
+  box-shadow: inset 0 1px 0 #ffffff9c, inset 0 -1px 0 #ffffff24;
+  transition: opacity 240ms ease;
+}
+.liquid-surface[data-reflect="true"]::after { opacity: .8; }
+.liquid-surface[data-pressed="true"]::after { opacity: 1; }
+.liquid-surface > canvas[data-liquid-glass-layer] { pointer-events: none !important; }
+[data-theme="dark"] .liquid-surface::after {
+  background: radial-gradient(240px circle at var(--pointer-x) var(--pointer-y), #ffffff30, #ffffff08 48%, transparent 80%);
+}
 .stats-dialog[open]:not(.closing) {
   animation: openrt-dialog-enter 200ms cubic-bezier(.2,.8,.2,1) both;
   transform-origin: center;
@@ -62,7 +85,7 @@ button[aria-disabled="true"]::after { opacity: 0; }
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateY(-5px) scale(.985);
+  transform: translateY(-4px) scale(.985);
   transform-origin: top right;
   transition: opacity 180ms ease, transform 200ms cubic-bezier(.2,.8,.2,1), visibility 0s linear 200ms;
 }
@@ -79,7 +102,7 @@ button[aria-disabled="true"]::after { opacity: 0; }
 }
 @keyframes openrt-dialog-close {
   from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(6px) scale(.985); }
+  to { opacity: 0; transform: translateY(8px) scale(.985); }
 }
 @keyframes openrt-backdrop-enter {
   from { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }
@@ -93,7 +116,12 @@ button[aria-disabled="true"]::after { opacity: 0; }
   button { transform: none !important; transition: none !important; }
   button::before,
   button::after { display: none; transition: none !important; }
+  .liquid-surface::after { display: none; }
   .stats-dialog[open],
   .stats-dialog[open]::backdrop { animation: none !important; transform: none !important; }
   .data-info-wrap > .data-popover { transform: none; transition: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .liquid-surface { background: var(--page, #fff) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  .liquid-surface::after { display: none; }
 }

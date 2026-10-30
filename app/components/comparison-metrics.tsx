@@ -26,6 +26,7 @@ const currency = new Intl.NumberFormat("zh-CN", {
   maximumFractionDigits: 2,
 });
 const integer = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 0 });
+const signedMetrics = new Set(["mean", "median", "min", "max", "p05", "p95", "p25", "p75", "profit", "return"]);
 
 function formatValue(value: number | null, format: ComparisonMetricRow["format"], signed = true) {
   if (value === null || !Number.isFinite(value)) return "—";
@@ -53,7 +54,7 @@ export function ComparisonMetrics({ rows, labels, compact = false }: ComparisonM
             const formatted = formatValue(value, row.format, !["lossProbability", "positiveProbability", "sd"].includes(row.id));
             return <div key={side} className={`cmp-value-cell cmp-value-cell--${side}${isWinner ? " cmp-value-cell--winner" : ""}`} data-winner={isWinner || undefined}>
               <span className="cmp-fund-label" title={labels[index]}><i aria-hidden="true"/>{labels[index]}</span>
-              <strong className="cmp-value" title={`${labels[index]}：${formatted}`}>{formatted}</strong>
+              <strong className="cmp-value" style={{ color: signedMetrics.has(row.id) && value !== null && Number.isFinite(value) && value !== 0 ? value > 0 ? "var(--positive, #d9363e)" : "var(--negative, #168659)" : "var(--ink)" }} title={`${labels[index]}：${formatted}`}>{formatted}</strong>
               {isWinner && <span className="cmp-winner-badge" aria-label={`${labels[index]}在${row.label}指标较优`}>優勝！</span>}
             </div>;
           })}

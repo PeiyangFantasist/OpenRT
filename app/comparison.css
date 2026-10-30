@@ -1,152 +1,195 @@
-.cmp-metrics {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+.comparison-workspace {
+  display: flex;
+  flex: 1;
+  min-height: 0;
   min-width: 0;
+  flex-direction: column;
+  gap: 16px;
 }
-.cmp-metric {
-  min-width: 0;
-  padding: 12px 12px 9px;
-  border: 1px solid #eee2d4;
-  border-radius: 11px;
-  background: linear-gradient(135deg, #fffdf9e8, #fff8ef80);
+.comparison-heading,
+.comparison-heading > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
-.cmp-metric-heading {
-  margin: 0 0 9px;
-  color: #947b60;
-  font-size: 11px;
-  line-height: 1.4;
-  font-weight: 500;
-}
-.cmp-metric-values {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 7px;
-  min-width: 0;
-}
-.cmp-value-cell {
-  position: relative;
-  min-width: 0;
-  padding: 10px 8px 9px;
-  border: 1.5px solid #eadfce;
-  border-radius: 8px;
-  background: #fffaf4a8;
-}
-.cmp-value-cell--winner {
-  border-color: #d84f48;
-  background: linear-gradient(135deg, #fffaf5, #fff1e95c);
-}
-.cmp-fund-label {
-  display: block;
-  padding-right: 11px;
-  overflow: hidden;
-  color: #a28a6d;
-  font-size: 8px;
-  line-height: 1.5;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.cmp-fund-label i {
-  display: inline-block;
-  width: 4px;
-  height: 4px;
-  margin: 0 4px 1px 0;
-  border-radius: 50%;
-  background: #d18a46;
-}
-.cmp-value-cell--b .cmp-fund-label i { background: #8f8bab; }
-.cmp-value {
-  display: block;
-  margin-top: 6px;
-  overflow: hidden;
-  color: #78583a;
-  font-size: clamp(15px, 1.6vw, 25px);
-  font-weight: 500;
-  line-height: 1.15;
-  letter-spacing: -.65px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.cmp-winner-badge {
-  position: absolute;
-  z-index: 1;
-  top: -8px;
-  right: -3px;
-  padding: 0 2px;
-  color: #d84f48;
-  background: #fffaf4;
-  font-family: "Arial Black", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK JP", sans-serif;
-  font-size: 15px;
-  font-weight: 900;
-  font-style: italic;
-  line-height: 1.15;
-  letter-spacing: -1px;
-  transform: rotate(12deg);
-  pointer-events: none;
-  user-select: none;
-  -webkit-text-stroke: .35px currentColor;
-}
-.cmp-metric-note {
-  margin: 7px 0 0;
-  overflow: hidden;
-  color: #ac957b;
-  font-size: 8px;
-  line-height: 1.5;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.cmp-metrics--compact {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 9px;
-  flex-shrink: 0;
-}
-.cmp-metrics--compact .cmp-metric { padding: 8px 9px 6px; }
-.cmp-metrics--compact .cmp-metric-heading { margin-bottom: 7px; font-size: 9px; }
-.cmp-metrics--compact .cmp-metric-values { gap: 6px; }
-.cmp-metrics--compact .cmp-value-cell { padding: 8px 6px 7px; border-radius: 6px; }
-.cmp-metrics--compact .cmp-fund-label { font-size: 7px; }
-.cmp-metrics--compact .cmp-value { font-size: clamp(13px, 1.35vw, 23px); margin-top: 5px; letter-spacing: -.6px; }
-.cmp-metrics--compact .cmp-winner-badge { top: -7px; right: -3px; font-size: 13px; }
-.cmp-metrics--compact .cmp-metric-note { margin-top: 5px; font-size: 7px; }
-.cmp-metric--money .cmp-value { font-size: clamp(14px, 1.35vw, 22px); }
-.cmp-metrics--compact .cmp-metric--money .cmp-value { font-size: clamp(12px, 1.13vw, 20px); }
-@media (max-width: 1150px) {
-  .cmp-metrics--compact { gap: 7px; }
-  .cmp-metrics--compact .cmp-metric { padding: 7px; }
-  .cmp-metrics--compact .cmp-metric-values { gap: 5px; }
+.comparison-heading { justify-content: space-between; flex-shrink: 0; }
+.comparison-heading h1 { font-size: 20px; font-weight: 650; letter-spacing: -.6px; }
+.comparison-heading > div:first-child > span { color: var(--ink); opacity: .5; font-size: 11px; }
+.comparison-mode { flex: 0 0 auto; }
+.comparison-mode button { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; }
+.comparison-bars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; flex-shrink: 0; }
+.comparison-bars .fund-toolbar { border-radius: 999px; min-width: 0; min-height: 64px; flex-wrap: nowrap; gap: 8px; padding: 8px 16px; }
+.comparison-bars .fund-search { min-width: 0; gap: 8px; flex: 0 0 auto; }
+.comparison-bars .fund-search input { width: 88px; font-size: 12px; }
+.comparison-bars .fund-search .primary-button { padding: 8px; }
+.comparison-bars .fund-identity { position: static; inset: auto; display: block; min-width: 0; flex: 1; }
+.comparison-bars .fund-identity strong { max-width: none; font-size: 12px; }
+.comparison-bars .fund-identity > span { margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.comparison-bars .nav-value { display: none; }
+.comparison-bars .refresh-data { position: static; inset: auto; flex: 0 0 auto; width: 32px; height: 32px; padding: 8px; }
+.slot-letter { display: grid; place-items: center; flex-shrink: 0; width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--ink); font-size: 11px; font-weight: 700; }
+.comparison-bars .inline-note { flex: 1; white-space: normal; }
+.comparison-bars .quick-menu { position: relative; flex-shrink: 0; }
+.comparison-bars .quick-menu > summary,
+.comparison-fees > summary { display: flex; align-items: center; gap: 4px; list-style: none; cursor: pointer; color: var(--ink); font-size: 11px; padding: 8px 4px; }
+.comparison-bars .quick-menu > summary::-webkit-details-marker,
+.comparison-fees > summary::-webkit-details-marker,
+.comparison-details > summary::-webkit-details-marker { display: none; }
+.comparison-bars .quick-menu > .quick-funds { left: auto; right: 0; }
+.comparison-range { margin-left: auto; font-variant-numeric: tabular-nums; }
+.comparison-plan-toolbar { display: flex; align-items: center; gap: 16px; min-height: 32px; flex-shrink: 0; }
+.comparison-plan-summary { display: flex; align-items: center; gap: 16px; min-width: 0; font-size: 11px; }
+.comparison-plan-summary strong { font-size: 12px; font-weight: 550; white-space: nowrap; }
+.comparison-plan-summary span, .comparison-plan-settlement { color: var(--ink); opacity: .55; font-size: 10px; font-variant-numeric: tabular-nums; }
+.comparison-plan-settlement { margin-left: auto; white-space: nowrap; }
+.comparison-plan-form { display: flex; flex-direction: column; gap: 16px; }
+.comparison-plan-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: end; }
+.comparison-plan-fields > label, .comparison-plan-fields .fee-field { font-size: 12px; color: var(--ink); }
+.comparison-plan-fields input { display: block; width: 100%; margin-top: 8px; min-height: 40px; padding: 8px; font-size: 13px; }
+.comparison-plan-fields .comparison-fees { grid-column: 1 / -1; }
+.comparison-plan-fields .comparison-fees > summary { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 4px 0; list-style: none; cursor: pointer; font-size: 12px; }
+.comparison-plan-fields .advanced-options-content { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 8px; padding: 16px; border-radius: 16px; box-shadow: none; }
+.comparison-plan-fields .calculate-button { grid-column: 1 / -1; justify-self: end; min-width: 104px; min-height: 40px; padding: 8px 24px; }
+.stats-dialog:has(.comparison-plan-form) { width: min(560px, calc(100vw - 32px)); }
+.comparison-workspace .compare-curve { min-height: 0; flex: 1; display: flex; flex-direction: column; }
+.comparison-legend { display: flex; align-items: center; gap: 16px; font-size: 10px; color: var(--ink); }
+.comparison-legend > span { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.comparison-legend i { display: inline-block; width: 16px; height: 0; border-top: 2px solid var(--ink); }
+.comparison-legend .series-b { border-top-style: dashed; }
+.comparison-legend .series-cost { border-top-style: dotted; opacity: .4; }
+.comparison-details { position: relative; flex-shrink: 0; font-size: 10px; line-height: 1.6; }
+.comparison-details > summary { display: flex; align-items: center; gap: 8px; list-style: none; cursor: pointer; color: var(--ink); opacity: .6; }
+.comparison-details time { margin-left: auto; font-size: 10px; font-variant-numeric: tabular-nums; }
+.comparison-details-content { position: absolute; bottom: calc(100% + 8px); right: 0; z-index: 11; width: min(560px, 100%); max-height: 50dvh; overflow: auto; padding: 24px; border-radius: 24px; color: var(--ink); }
+.comparison-details-content p { font-size: 12px; line-height: 1.75; margin-bottom: 8px; }
+.comparison-details-content > div { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.comparison-details-content > div > strong { font-size: 12px; }
+.comparison-details-content > div > p { margin-top: 4px; }
+.cmp-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; min-width: 0; }
+.cmp-metric { min-width: 0; padding: 16px; border: 1px solid var(--glass-border, var(--line)); border-radius: 16px; background: transparent; }
+.cmp-metric-heading { margin: 0 0 8px; color: var(--ink); font-size: 11px; font-weight: 500; line-height: 1.4; }
+.cmp-metric-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: 0; }
+.cmp-value-cell { position: relative; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: transparent; }
+.cmp-value-cell--winner { border-color: var(--positive); }
+.cmp-fund-label { display: block; padding-right: 8px; overflow: hidden; color: var(--ink); opacity: .6; font-size: 9px; line-height: 1.5; white-space: nowrap; text-overflow: ellipsis; }
+.cmp-fund-label i { display: inline-block; width: 8px; height: 0; margin: 0 4px 4px 0; border-top: 2px solid currentColor; }
+.cmp-value-cell--b .cmp-fund-label i { border-top-style: dashed; }
+.cmp-value { display: block; margin-top: 4px; overflow: hidden; color: var(--ink); font-size: clamp(16px, 1.6vw, 25px); font-weight: 550; line-height: 1.3; letter-spacing: -.6px; font-variant-numeric: tabular-nums; white-space: nowrap; text-overflow: ellipsis; }
+.cmp-value.positive { color: var(--positive); }
+.cmp-value.negative { color: var(--negative); }
+.cmp-winner-badge { position: absolute; z-index: 1; top: -8px; right: -4px; padding: 0 4px; color: var(--positive); background: transparent; font-family: "Arial Black", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK JP", sans-serif; font-size: 14px; font-weight: 900; font-style: italic; line-height: 1.15; letter-spacing: -1px; transform: rotate(12deg); pointer-events: none; user-select: none; -webkit-text-stroke: .35px currentColor; }
+.cmp-metric-note { margin: 8px 0 0; overflow: hidden; color: var(--ink); opacity: .5; font-size: 9px; line-height: 1.5; white-space: nowrap; text-overflow: ellipsis; }
+.cmp-metrics--compact { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; flex-shrink: 0; }
+.cmp-metrics--compact .cmp-metric { padding: 8px; }
+.cmp-metrics--compact .cmp-metric-heading { font-size: 10px; }
+.cmp-metrics--compact .cmp-fund-label { font-size: 8px; }
+.cmp-metrics--compact .cmp-value { font-size: clamp(14px, 1.5vw, 24px); }
+.cmp-metrics--compact .cmp-metric-note { font-size: 8px; }
+.cmp-metric--money .cmp-value { font-size: clamp(13px, 1.35vw, 22px); }
+.cmp-metrics--compact .cmp-metric--money .cmp-value { font-size: clamp(12px, 1.2vw, 20px); }
+.comparison-dialog-body { min-height: 0; overflow: auto; max-height: calc(100dvh - 192px); padding: 8px 4px 4px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.stats-dialog:has(.comparison-dialog-body) { width: min(960px, calc(100vw - 48px)); }
+.comparison-dialog-body .cmp-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.comparison-dialog-body .cmp-metric { padding: 8px; }
+.comparison-dialog-body .cmp-value { font-size: 18px; }
+.comparison-dialog-body .cmp-fund-label { font-size: 8px; }
+.compare-densities { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.compare-densities .panel-title h2 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+@media (max-width: 1100px) {
+  .comparison-workspace { gap: 8px; }
+  .comparison-bars { gap: 8px; }
+  .comparison-bars .fund-toolbar { padding: 8px; }
+  .comparison-bars .fund-identity strong { max-width: none; font-size: 11px; }
+  .comparison-bars .fund-identity > span { font-size: 9px; }
+  .comparison-bars .fund-search input { width: 72px; }
+  .comparison-bars .fund-search .primary-button { font-size: 11px; }
+  .comparison-bars .refresh-data { padding: 4px; }
+  .comparison-bars .quick-menu > summary { font-size: 10px; }
+  .cmp-metrics--compact { gap: 8px; }
   .cmp-metrics--compact .cmp-value { font-size: 17px; }
   .cmp-metrics--compact .cmp-metric--money .cmp-value { font-size: 14px; }
-  .cmp-metrics--compact .cmp-value-cell { padding-right: 4px; padding-left: 4px; }
+  .comparison-heading > div:first-child > span { display: none; }
 }
 @media (max-width: 760px) {
-  .cmp-metrics { gap: 9px; }
-  .cmp-metric { padding: 10px 8px 8px; border-radius: 9px; }
-  .cmp-metric-heading { margin-bottom: 8px; font-size: 10px; }
-  .cmp-metric-values { gap: 5px; }
-  .cmp-value-cell { padding: 8px 5px; border-radius: 6px; }
-  .cmp-fund-label { font-size: 7px; padding-right: 7px; }
-  .cmp-fund-label i { width: 3px; height: 3px; margin-right: 3px; }
-  .cmp-value { margin-top: 5px; font-size: 17px; letter-spacing: -.6px; }
-  .cmp-winner-badge { font-size: 12px; top: -7px; right: -3px; }
-  .cmp-metric-note { margin-top: 6px; font-size: 7px; }
-  .cmp-metric--money .cmp-value { font-size: 13px; }
-  .cmp-metrics--compact { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px 7px; }
-  .cmp-metrics--compact .cmp-metric { padding: 5px 7px 4px; border-radius: 8px; }
-  .cmp-metrics--compact .cmp-metric-heading { font-size: 8px; margin-bottom: 5px; }
-  .cmp-metrics--compact .cmp-value-cell { padding: 5px 4px; }
-  .cmp-metrics--compact .cmp-fund-label { font-size: 6px; line-height: 1.3; }
-  .cmp-metrics--compact .cmp-value { font-size: 15px; margin-top: 3px; line-height: 1.1; }
-  .cmp-metrics--compact .cmp-metric--money .cmp-value { font-size: 11px; letter-spacing: -.4px; }
-  .cmp-metrics--compact .cmp-winner-badge { font-size: 11px; top: -6px; right: -3px; }
-  .cmp-metrics--compact .cmp-metric-note { font-size: 6px; margin-top: 3px; line-height: 1.25; }
+  .comparison-workspace { gap: 8px; }
+  .comparison-heading h1 { font-size: 16px; }
+  .comparison-mode button { padding: 8px 16px; font-size: 11px; }
+  .comparison-bars { grid-template-columns: minmax(0, 1fr); }
+  .comparison-workspace .comparison-bars .fund-toolbar { min-height: 56px; gap: 8px; padding: 8px; }
+  .comparison-workspace .comparison-bars .fund-toolbar:has(.fund-identity) { padding-bottom: 8px; }
+  .comparison-bars .fund-search { width: auto; }
+  .comparison-bars .fund-search input { width: 88px; }
+  .comparison-bars .fund-search .primary-button { padding: 8px; }
+  .comparison-bars .quick-menu > summary { width: 24px; height: 24px; justify-content: center; font-size: 0; padding: 4px; }
+  .comparison-bars .fund-identity { position: static; inset: auto; display: block; min-width: 0; width: auto; flex: 1; padding: 0; margin: 0; }
+  .comparison-bars .fund-identity strong { max-width: none; font-size: 11px; }
+  .comparison-bars .fund-identity > span { display: block; margin-top: 4px; font-size: 9px; }
+  .comparison-workspace .comparison-bars .refresh-data { position: static; inset: auto; width: 24px; height: 24px; padding: 4px; }
+  .slot-letter { width: 24px; height: 24px; }
+  .comparison-bars .inline-note { display: none; }
+  .comparison-range { display: none; }
+  .comparison-plan-toolbar { gap: 8px; }
+  .comparison-plan-toolbar > .secondary-button { padding: 4px 8px; }
+  .comparison-plan-summary { flex: 1; flex-direction: column; align-items: flex-start; gap: 4px; overflow: hidden; }
+  .comparison-plan-summary strong { font-size: 10px; }
+  .comparison-plan-summary span { font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .comparison-plan-settlement { display: none; }
+  .comparison-plan-fields { gap: 16px; }
+  .comparison-plan-fields > label, .comparison-plan-fields .fee-field { font-size: 11px; }
+  .comparison-plan-fields input { min-height: 40px; padding: 8px; font-size: 12px; }
+  .comparison-plan-fields .calculate-button { width: 100%; }
+  .comparison-legend { gap: 8px; font-size: 8px; }
+  .comparison-legend i { width: 16px; }
+  .comparison-details { font-size: 9px; }
+  .comparison-details time { font-size: 9px; }
+  .comparison-details-content { width: 100%; padding: 16px; }
+  .cmp-metrics--compact { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .cmp-metric { padding: 8px; }
+  .cmp-metric-heading { font-size: 10px; margin-bottom: 8px; }
+  .cmp-value-cell { padding: 8px 4px; }
+  .cmp-fund-label { font-size: 8px; padding-right: 8px; }
+  .cmp-value { font-size: 16px; }
+  .cmp-winner-badge { font-size: 12px; }
+  .cmp-metric-note { font-size: 8px; margin-top: 4px; }
+  .cmp-metrics--compact .cmp-metric { padding: 4px; border-radius: 8px; }
+  .cmp-metrics--compact .cmp-metric-heading { font-size: 9px; margin-bottom: 4px; }
+  .cmp-metrics--compact .cmp-fund-label { display: none; }
+  .cmp-metrics--compact .cmp-value { font-size: 14px; margin-top: 0; }
+  .cmp-metrics--compact .cmp-metric--money .cmp-value { font-size: 11px; }
+  .cmp-metrics--compact .cmp-value-cell { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 4px; }
+  .cmp-metrics--compact .cmp-value-cell::before { color: var(--ink); opacity: .55; font-size: 8px; }
+  .cmp-metrics--compact .cmp-value-cell--a::before { content: "A"; }
+  .cmp-metrics--compact .cmp-value-cell--b::before { content: "B"; }
+  .cmp-metrics--compact .cmp-metric-note { display: none; }
+  .cmp-metrics--compact .cmp-winner-badge { font-size: 10px; top: -8px; }
+  .comparison-dialog-body .cmp-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .comparison-dialog-body .cmp-value { font-size: 16px; }
+  .comparison-dialog-body .cmp-fund-label { font-size: 7px; }
+  .stats-dialog:has(.comparison-dialog-body) { width: calc(100vw - 32px); }
+  .compare-densities { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+@media (max-height: 760px) and (min-width: 761px) {
+  .comparison-workspace { gap: 8px; }
+  .comparison-heading h1 { font-size: 16px; }
+  .comparison-mode button { padding: 4px 16px; font-size: 11px; }
+  .comparison-bars .fund-toolbar { min-height: 48px; padding: 8px; }
+  .cmp-metrics--compact .cmp-metric { padding: 8px; }
 }
 @media (max-width: 380px) {
-  .cmp-metrics { gap: 7px; }
-  .cmp-metric { padding-left: 6px; padding-right: 6px; }
-  .cmp-value { font-size: 15px; }
-  .cmp-metrics--compact .cmp-metric { padding-left: 5px; padding-right: 5px; }
-  .cmp-metrics--compact .cmp-value { font-size: 13px; letter-spacing: -.5px; }
-  .cmp-metrics--compact .cmp-metric--money .cmp-value { font-size: 10px; }
-  .cmp-metrics--compact .cmp-fund-label { font-size: 5.7px; }
+  .comparison-bars .fund-search input { width: 72px; }
+  .comparison-bars .fund-identity strong { font-size: 10px; }
+  .comparison-bars .fund-identity > span { font-size: 8px; }
+  .cmp-metrics--compact .cmp-value { font-size: 14px; }
+  .cmp-metrics--compact .cmp-metric--money .cmp-value { font-size: 11px; }
+}
+
+/* Compact controls preserve the chart on smaller phones. */
+@media (max-width: 760px) {
+  .comparison-mode button { padding-top: 4px; padding-bottom: 4px; }
+  .comparison-workspace .comparison-bars .fund-toolbar { min-height: 48px; }
+  .comparison-workspace .comparison-bars .fund-search .primary-button { min-height: 32px; padding: 4px 8px; }
+}
+@media (max-width: 760px) and (max-height: 740px) {
+  .comparison-dca > .cmp-metrics--compact > [data-metric="cost"],
+  .comparison-dca > .cmp-metrics--compact > [data-metric="value"] { display: none; }
 }

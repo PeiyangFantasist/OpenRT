@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import Home from "../app/page";
 import "../app/globals.css";
 import "../app/interactions.css";
-import "@fontsource/jetbrains-mono/latin-400.css";
 
 class AppBoundary extends React.Component<React.PropsWithChildren, { failed: boolean }> {
   state = { failed: false };

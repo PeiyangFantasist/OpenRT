@@ -2,143 +2,145 @@
 
 import { useEffect } from "react";
 
-/** Delegated button reflections stay outside React's rendering path. */
+type Reflection = { x: number; y: number; targetX: number; targetY: number; timer?: ReturnType<typeof setTimeout> };
+
+/** Pointer reflections use one delegated listener and an idle-aware animation frame. */
 export function InteractionEffects() {
   useEffect(() => {
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const touched = new Set<HTMLButtonElement>();
-    const timers = new Map<HTMLButtonElement, ReturnType<typeof setTimeout>>();
-    let active: HTMLButtonElement | null = null;
-    let pressed: { button: HTMLButtonElement; pointerId: number } | null = null;
-    let pending: { button: HTMLButtonElement; x: number; y: number; touch: boolean } | null = null;
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const reflections = new Map<HTMLElement, Reflection>();
     let frame: number | null = null;
+    let pending: { x: number; y: number; elements: HTMLElement[]; touch: boolean } | null = null;
+    let hovered: HTMLElement[] = [];
+    let pressed: { elements: HTMLElement[]; pointerId: number } | null = null;
 
-    const buttonAt = (target: EventTarget | null) => {
-      if (!(target instanceof Element)) return null;
-      const button = target.closest("button");
-      return button instanceof HTMLButtonElement && !button.disabled && button.getAttribute("aria-disabled") !== "true" ? button : null;
+    const elementsAt = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return [];
+      const button = target.closest<HTMLButtonElement>("button");
+      const surface = target.closest<HTMLElement>(".liquid-surface");
+      return [surface, button && !button.disabled && button.getAttribute("aria-disabled") !== "true" ? button : null]
+        .filter((element): element is HTMLElement => element !== null);
     };
-    const stopTimer = (button: HTMLButtonElement) => {
-      const timer = timers.get(button);
-      if (timer !== undefined) clearTimeout(timer);
-      timers.delete(button);
+    const remove = (element: HTMLElement) => {
+      const state = reflections.get(element);
+      if (state?.timer) clearTimeout(state.timer);
+      reflections.delete(element);
+      element.removeAttribute("data-reflect");
+      element.removeAttribute("data-pressed");
+      for (const key of ["--pointer-x", "--pointer-y", "--tilt-x", "--tilt-y"]) element.style.removeProperty(key);
     };
-    const removeVariables = (button: HTMLButtonElement) => {
-      for (const property of ["--pointer-x", "--pointer-y", "--tilt-x", "--tilt-y"]) button.style.removeProperty(property);
-      touched.delete(button);
+    const fade = (element: HTMLElement, delay = 0) => {
+      const state = reflections.get(element);
+      if (!state) return;
+      if (state.timer) clearTimeout(state.timer);
+      state.timer = setTimeout(() => {
+        element.removeAttribute("data-reflect");
+        element.removeAttribute("data-pressed");
+        element.style.setProperty("--tilt-x", "0deg");
+        element.style.setProperty("--tilt-y", "0deg");
+        state.timer = setTimeout(() => remove(element), 240);
+      }, delay);
     };
-    const clearButton = (button: HTMLButtonElement, immediate = false) => {
-      stopTimer(button);
-      touched.add(button);
-      button.removeAttribute("data-reflect");
-      button.removeAttribute("data-pressed");
-      button.style.setProperty("--tilt-x", "0deg");
-      button.style.setProperty("--tilt-y", "0deg");
-      if (active === button) active = null;
-      if (pending?.button === button) pending = null;
-      if (immediate) removeVariables(button);
-      else timers.set(button, setTimeout(() => { timers.delete(button); removeVariables(button); }, 230));
-    };
-    const fadeLater = (button: HTMLButtonElement, delay: number) => {
-      stopTimer(button);
-      timers.set(button, setTimeout(() => { timers.delete(button); clearButton(button); }, delay));
-    };
-    const renderPointer = () => {
+    const render = () => {
       frame = null;
       const position = pending;
       pending = null;
-      if (!position) return;
-      const { button, x, y, touch } = position;
-      if (reducedMotion.matches || button.disabled || button.getAttribute("aria-disabled") === "true" || !button.isConnected) {
-        clearButton(button, true);
-        return;
+      if (position) {
+        // Read geometry together, then write the interpolated highlights below.
+        const positions = position.elements.map(element => ({ element, rect: element.getBoundingClientRect() }));
+        for (const { element, rect } of positions) {
+          if (!rect.width || !rect.height) continue;
+          let state = reflections.get(element);
+          const x = Math.max(0, Math.min(100, ((position.x - rect.left) / rect.width) * 100));
+          const y = Math.max(0, Math.min(100, ((position.y - rect.top) / rect.height) * 100));
+          if (!state) {
+            state = { x, y, targetX: x, targetY: y };
+            reflections.set(element, state);
+          }
+          if (state.timer) clearTimeout(state.timer);
+          state.timer = undefined;
+          state.targetX = x;
+          state.targetY = y;
+          element.setAttribute("data-reflect", "true");
+          if (position.touch && !pressed?.elements.includes(element)) fade(element, 80);
+        }
       }
-      // One geometry read per frame, regardless of pointer event frequency.
-      const rect = button.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      const relativeX = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
-      const relativeY = Math.max(0, Math.min(1, (y - rect.top) / rect.height));
-      stopTimer(button);
-      if (active && active !== button) clearButton(active);
-      active = button;
-      touched.add(button);
-      button.style.setProperty("--pointer-x", `${(relativeX * 100).toFixed(2)}%`);
-      button.style.setProperty("--pointer-y", `${(relativeY * 100).toFixed(2)}%`);
-      button.style.setProperty("--tilt-x", `${touch ? 0 : ((0.5 - relativeY) * 2.2).toFixed(2)}deg`);
-      button.style.setProperty("--tilt-y", `${touch ? 0 : ((relativeX - 0.5) * 2.2).toFixed(2)}deg`);
-      button.setAttribute("data-reflect", "true");
-      if (touch && pressed?.button !== button) fadeLater(button, 90);
+      let moving = false;
+      for (const [element, state] of reflections) {
+        if (!element.isConnected) { remove(element); continue; }
+        if (!element.hasAttribute("data-reflect")) continue;
+        state.x += (state.targetX - state.x) * 0.24;
+        state.y += (state.targetY - state.y) * 0.24;
+        element.style.setProperty("--pointer-x", `${state.x.toFixed(2)}%`);
+        element.style.setProperty("--pointer-y", `${state.y.toFixed(2)}%`);
+        if (element instanceof HTMLButtonElement) {
+          element.style.setProperty("--tilt-x", `${((50 - state.y) * 0.015).toFixed(2)}deg`);
+          element.style.setProperty("--tilt-y", `${((state.x - 50) * 0.015).toFixed(2)}deg`);
+        }
+        if (Math.abs(state.targetX - state.x) + Math.abs(state.targetY - state.y) > 0.08) moving = true;
+      }
+      if (moving && !motion.matches) frame = requestAnimationFrame(render);
     };
     const track = (event: PointerEvent) => {
-      if (reducedMotion.matches) return;
-      const button = buttonAt(event.target);
-      if (!button) {
-        pending = null;
-        if (active) clearButton(active);
-        return;
-      }
-      pending = { button, x: event.clientX, y: event.clientY, touch: event.pointerType === "touch" };
-      if (frame === null) frame = requestAnimationFrame(renderPointer);
+      if (motion.matches) return;
+      const elements = elementsAt(event.target);
+      for (const old of hovered) if (!elements.includes(old)) fade(old);
+      hovered = elements;
+      if (!elements.length) return;
+      pending = { x: event.clientX, y: event.clientY, elements, touch: event.pointerType === "touch" };
+      if (frame === null) frame = requestAnimationFrame(render);
     };
     const pointerDown = (event: PointerEvent) => {
-      if (reducedMotion.matches || (event.pointerType === "mouse" && event.button !== 0)) return;
-      const button = buttonAt(event.target);
-      if (!button) return;
-      if (pressed && pressed.button !== button) clearButton(pressed.button);
-      pressed = { button, pointerId: event.pointerId };
-      touched.add(button);
-      stopTimer(button);
-      button.setAttribute("data-pressed", "true");
+      if (motion.matches || (event.pointerType === "mouse" && event.button !== 0)) return;
+      const elements = elementsAt(event.target);
+      pressed = { elements, pointerId: event.pointerId };
+      for (const element of elements) element.setAttribute("data-pressed", "true");
       track(event);
     };
     const pointerUp = (event: PointerEvent) => {
-      if (!pressed || pressed.pointerId !== event.pointerId) return;
-      const button = pressed.button;
+      if (pressed?.pointerId !== event.pointerId) return;
+      for (const element of pressed.elements) {
+        element.removeAttribute("data-pressed");
+        if (event.pointerType === "touch") fade(element, 80);
+      }
       pressed = null;
-      button.removeAttribute("data-pressed");
-      if (event.pointerType === "touch") fadeLater(button, 90);
-      else if (buttonAt(event.target) !== button) clearButton(button);
     };
     const pointerOut = (event: PointerEvent) => {
-      const button = buttonAt(event.target);
-      if (!button) return;
-      if (event.relatedTarget instanceof Node && button.contains(event.relatedTarget)) return;
-      if (event.pointerType === "touch" && pressed?.button === button) return;
-      clearButton(button);
+      if (event.relatedTarget !== null) return;
+      for (const element of hovered) fade(element);
+      hovered = [];
     };
-    const clearAll = () => {
+    const clear = () => {
       if (frame !== null) cancelAnimationFrame(frame);
       frame = null;
       pending = null;
+      hovered = [];
+      for (const element of pressed?.elements ?? []) element.removeAttribute("data-pressed");
       pressed = null;
-      for (const button of touched) clearButton(button, true);
-      for (const timer of timers.values()) clearTimeout(timer);
-      timers.clear();
-      active = null;
+      for (const element of reflections.keys()) remove(element);
     };
-    const visibilityChange = () => { if (document.hidden) clearAll(); };
-    const motionChange = () => { if (reducedMotion.matches) clearAll(); };
-    const listenerOptions = { capture: true, passive: true };
-    document.addEventListener("pointermove", track, listenerOptions);
-    document.addEventListener("pointerdown", pointerDown, listenerOptions);
-    document.addEventListener("pointerup", pointerUp, listenerOptions);
-    document.addEventListener("pointerout", pointerOut, listenerOptions);
-    document.addEventListener("pointercancel", clearAll, listenerOptions);
-    document.addEventListener("visibilitychange", visibilityChange);
-    window.addEventListener("blur", clearAll);
-    reducedMotion.addEventListener("change", motionChange);
+    const onVisibility = () => { if (document.hidden) clear(); };
+    const onMotion = () => { if (motion.matches) clear(); };
+    const options = { capture: true, passive: true };
+    document.addEventListener("pointermove", track, options);
+    document.addEventListener("pointerdown", pointerDown, options);
+    document.addEventListener("pointerup", pointerUp, options);
+    document.addEventListener("pointerout", pointerOut, options);
+    document.addEventListener("pointercancel", clear, options);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", clear);
+    motion.addEventListener("change", onMotion);
     return () => {
       document.removeEventListener("pointermove", track, true);
       document.removeEventListener("pointerdown", pointerDown, true);
       document.removeEventListener("pointerup", pointerUp, true);
       document.removeEventListener("pointerout", pointerOut, true);
-      document.removeEventListener("pointercancel", clearAll, true);
-      document.removeEventListener("visibilitychange", visibilityChange);
-      window.removeEventListener("blur", clearAll);
-      reducedMotion.removeEventListener("change", motionChange);
-      clearAll();
+      document.removeEventListener("pointercancel", clear, true);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", clear);
+      motion.removeEventListener("change", onMotion);
+      clear();
     };
   }, []);
-
   return null;
 }

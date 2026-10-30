@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, ChevronDown } from "lucide-react";
 import { AnimatedDialog } from "./animated-dialog";
 
 type QuickFund = { code: string; name: string };
@@ -115,7 +115,7 @@ export function QuickFunds({ onSelect, selectedCode, disabled = false }: QuickFu
   };
 
   return <>
-    <div className="quick-funds" aria-label="快捷基金">
+    <details className="quick-menu"><summary>快捷基金 <ChevronDown size={12}/></summary><div className="quick-funds glass" aria-label="快捷基金">
       <div className="quick-code-buttons">
         {funds.map(fund => <button
           type="button"
@@ -129,7 +129,7 @@ export function QuickFunds({ onSelect, selectedCode, disabled = false }: QuickFu
       </div>
       <button type="button" className="quick-edit" onClick={openEditor} aria-label="设置快捷基金" title="设置快捷基金"><Pencil size={13}/></button>
       {notice && !open && <span className="quick-note" role="status" title={notice.message}>{notice.summary}</span>}
-    </div>
+    </div></details>
     <AnimatedDialog open={open} onClose={closeEditor} title="快捷基金设置">
       <form className="quick-editor" onSubmit={save} noValidate>
         <p className="quick-note">最多 6 只。名称可留空；点击保存后生效，直接关闭会放弃未保存的修改。</p>
