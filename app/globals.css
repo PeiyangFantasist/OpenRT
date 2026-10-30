@@ -64,15 +64,8 @@ svg { flex-shrink: 0; }
 .nav-value strong { display: block; font-size: 20px; font-weight: 800; letter-spacing: -.6px; }
 .nav-value span { display: block; margin-top: 4px; font-size: 10px; color: var(--muted); }
 .quick-menu { position: relative; flex-shrink: 0; }
-.quick-menu > summary { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; padding: 8px; list-style: none; }
-.quick-menu > summary::-webkit-details-marker { display: none; }
-.quick-menu[open] > summary svg { transform: rotate(180deg); }
-.quick-menu > .quick-funds { position: absolute; left: 0; top: calc(100% + 8px); z-index: 30; min-width: 240px; padding: 16px; border-radius: 24px; }
-.quick-funds { display: flex; gap: 8px; align-items: center; }
-.quick-code-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-.quick-code-buttons button { border: 1px solid var(--line); border-radius: 999px; padding: 8px; font-size: 11px; }
-.quick-code-buttons button.selected { background: var(--selected); border-color: var(--ink); }
-.quick-edit { padding: 8px; display: grid; place-items: center; border-radius: 50%; }
+.quick-menu > .quick-trigger { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; padding: 8px; list-style: none; }
+.quick-trigger[aria-expanded="true"] svg { transform: rotate(180deg); }
 .quick-row { display: grid; grid-template-columns: 120px 1fr 24px; gap: 8px; align-items: end; }
 .quick-row label { font-size: 11px; line-height: 1.5; }
 .quick-row input { display: block; width: 100%; margin-top: 4px; font-size: 12px; }
@@ -236,8 +229,7 @@ svg { flex-shrink: 0; }
   .fund-search input { font-size: 12px; width: 120px; }
   .fund-search > svg { width: 16px; }
   .search-surface .primary-button { width: 32px; min-height: 32px; }
-  .quick-menu > summary { font-size: 10px; padding: 8px 0; }
-  .quick-menu > .quick-funds { left: auto; right: 0; }
+  .quick-menu > .quick-trigger { font-size: 10px; padding: 8px 0; }
   .fund-toolbar:has(.fund-identity) { padding-bottom: 32px; }
   .fund-identity { position: absolute; bottom: 0; left: 4px; right: 56px; display: flex; align-items: center; gap: 8px; }
   .fund-identity strong { font-size: 11px; max-width: 48%; }
@@ -461,5 +453,33 @@ svg { flex-shrink: 0; }
   .comparison-plan-fields { grid-template-columns: minmax(0,1fr); }
 }
 
-.quick-menu:not([open]) > .quick-funds { display: none; }
 .chart-subline { justify-content: flex-end; }
+
+/* Quick choices and their editor must stay legible above every glass pane. */
+.stats-dialog.quick-fund-dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  background: rgb(255 255 255 / .97);
+  border-color: rgb(0 0 0 / .16);
+  box-shadow: 0 24px 64px rgb(0 0 0 / .2);
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+:root[data-theme="dark"] .stats-dialog.quick-fund-dialog {
+  background: rgb(20 20 20 / .97);
+  border-color: rgb(255 255 255 / .24);
+  box-shadow: 0 24px 64px rgb(0 0 0 / .5);
+}
+.quick-fund-dialog::backdrop { background: rgb(0 0 0 / .28); }
+.quick-selector { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.quick-fund-option { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; min-height: 56px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 16px; text-align: left; white-space: normal; }
+.quick-fund-option > span { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.quick-fund-option strong { font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.quick-fund-option small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.quick-fund-option.selected { border-color: var(--ink); background: var(--selected); }
+.quick-fund-option:hover { background: var(--hover); }
+.quick-settings-button { align-self: flex-end; min-height: 40px; margin-top: 8px; }
+@media (prefers-reduced-transparency: reduce) {
+  .stats-dialog.quick-fund-dialog,
+  :root[data-theme="dark"] .stats-dialog.quick-fund-dialog { background: var(--page); }
+}

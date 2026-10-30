@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState, type FormEvent } from "react";
-import { Pencil, Plus, Trash2, ChevronDown } from "lucide-react";
+import { Pencil, Plus, Trash2, ChevronDown, Check } from "lucide-react";
 import { AnimatedDialog } from "./animated-dialog";
 
 type QuickFund = { code: string; name: string };
@@ -43,6 +43,7 @@ export function QuickFunds({ onSelect, selectedCode, disabled = false }: QuickFu
   const [funds, setFunds] = useState<QuickFund[]>(() => copyFunds(DEFAULT_FUNDS));
   const [draft, setDraft] = useState<QuickFund[]>([]);
   const [open, setOpen] = useState(false);
+  const [selectorOpen, setSelectorOpen] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState<StorageNotice | null>(null);
 
@@ -115,22 +116,24 @@ export function QuickFunds({ onSelect, selectedCode, disabled = false }: QuickFu
   };
 
   return <>
-    <details className="quick-menu"><summary>快捷基金 <ChevronDown size={12}/></summary><div className="quick-funds glass" aria-label="快捷基金">
-      <div className="quick-code-buttons">
+    <div className="quick-menu"><button type="button" className="quick-trigger" aria-label="快捷基金" aria-haspopup="dialog" aria-expanded={selectorOpen} onClick={() => setSelectorOpen(true)}>快捷基金 <ChevronDown size={12}/></button></div>
+    <AnimatedDialog open={selectorOpen} onClose={() => setSelectorOpen(false)} title="快捷基金" className="quick-fund-dialog">
+      <div className="quick-selector" aria-label="快捷基金列表">
         {funds.map(fund => <button
           type="button"
           key={fund.code}
-          className={selectedCode === fund.code ? "selected" : ""}
+          className={`quick-fund-option${selectedCode === fund.code ? " selected" : ""}`}
           disabled={disabled}
           title={fund.name ? `${fund.name} · ${fund.code}` : fund.code}
           aria-label={`选择${fund.name || "基金"} ${fund.code}`}
-          onClick={() => onSelect(fund.code)}
-        >{fund.name || fund.code}</button>)}
+          onClick={() => { setSelectorOpen(false); onSelect(fund.code); }}
+        ><span><strong>{fund.name || fund.code}</strong><small>{fund.code}</small></span>{selectedCode === fund.code && <Check size={18} aria-hidden="true"/>}</button>)}
+        {funds.length === 0 && <p className="quick-note">尚未设置快捷基金</p>}
+        <button type="button" className="secondary-button quick-settings-button" onClick={openEditor}><Pencil size={14}/>设置快捷基金</button>
+        {notice && !open && <span className="quick-note" role="status" title={notice.message}>{notice.summary}</span>}
       </div>
-      <button type="button" className="quick-edit" onClick={openEditor} aria-label="设置快捷基金" title="设置快捷基金"><Pencil size={13}/></button>
-      {notice && !open && <span className="quick-note" role="status" title={notice.message}>{notice.summary}</span>}
-    </div></details>
-    <AnimatedDialog open={open} onClose={closeEditor} title="快捷基金设置">
+    </AnimatedDialog>
+    <AnimatedDialog open={open} onClose={closeEditor} title="快捷基金设置" className="quick-fund-dialog">
       <form className="quick-editor" onSubmit={save} noValidate>
         <p className="quick-note">最多 6 只。名称可留空；点击保存后生效，直接关闭会放弃未保存的修改。</p>
         {draft.map((fund, index) => <div className="quick-row" key={index}>

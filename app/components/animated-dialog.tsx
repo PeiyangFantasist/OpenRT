@@ -6,11 +6,12 @@ type AnimatedDialogProps = {
   open: boolean;
   onClose: () => void;
   title: string;
+  className?: string;
   children: ReactNode;
 };
 
 /** Keep the native modal mounted until its closing animation has completed. */
-export function AnimatedDialog({ open, onClose, title, children }: AnimatedDialogProps) {
+export function AnimatedDialog({ open, onClose, title, className, children }: AnimatedDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -40,10 +41,10 @@ export function AnimatedDialog({ open, onClose, title, children }: AnimatedDialo
 
   return <dialog
     ref={dialogRef}
-    className={`stats-dialog${open ? "" : " closing"}`}
+    className={`stats-dialog${className ? ` ${className}` : ""}${open ? "" : " closing"}`}
     aria-labelledby={titleId}
-    onCancel={event => { event.preventDefault(); onClose(); }}
-    onClose={() => { if (open) onClose(); }}
+    onCancel={event => { event.preventDefault(); event.stopPropagation(); onClose(); }}
+    onClose={event => { event.stopPropagation(); if (open) onClose(); }}
     onClick={event => {
       if (event.target !== event.currentTarget) return;
       const bounds = event.currentTarget.getBoundingClientRect();
