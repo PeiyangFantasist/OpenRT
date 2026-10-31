@@ -1,0 +1,5 @@
+import {mkdir,writeFile,rename,readFile,copyFile} from 'node:fs/promises';
+import {parseCatalogSource,validateCatalog,CATALOG_SOURCE} from '../lib/fund-catalog.ts';
+await mkdir('public/data',{recursive:true});
+try{await readFile('public/data/fund-catalog.json');}catch{await copyFile('data/bootstrap/fund-catalog.json','public/data/fund-catalog.json');}
+try{const response=await fetch(CATALOG_SOURCE,{signal:AbortSignal.timeout(40000),headers:{'User-Agent':'OpenRT/1.0 (public fund directory cache)'}});if(!response.ok)throw new Error(`HTTP ${response.status}`);const c=parseCatalogSource(await response.text());await writeFile('public/data/fund-catalog.json.tmp',JSON.stringify(c));await rename('public/data/fund-catalog.json.tmp','public/data/fund-catalog.json');console.log(`Fund directory: ${c.funds.length} entries, ${c.fetchedAt}`);}catch(e){try{const c=validateCatalog(JSON.parse(await readFile('public/data/fund-catalog.json','utf8')));console.warn(`Directory refresh failed, retaining snapshot ${c.fetchedAt}: ${e instanceof Error?e.message:'network error'}`);}catch{throw e;}}

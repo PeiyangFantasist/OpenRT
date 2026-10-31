@@ -1,20 +1,26 @@
 "use client";
 
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, Wallet, BookOpen, Columns2, ArrowUpRight, ArrowRight, Download, Search, RefreshCw, Sun, Moon, Settings2, ChevronDown, Info, ExternalLink, AlertCircle, Check } from "lucide-react";
+import { Activity, Wallet, UserRound, ChartNoAxesCombined, Star, Columns2, ArrowUpRight, ArrowRight, Download, Search, RefreshCw, Sun, Moon, Settings2, ChevronDown, Info, ExternalLink, AlertCircle, Check } from "lucide-react";
 import { ALPHA_PRESETS, rollingReturns, simulateDCA, type NavPoint } from "../lib/analytics";
 import { fetchFundClient } from "../lib/fund-client";
 import { CurveChart, Distribution } from "./components/charts";
-const MethodHelp = lazy(()=>import("./components/method-help").then(module=>({default:module.MethodHelp})));
+const PersonalPage = lazy(()=>import("./components/personal-page").then(module=>({default:module.PersonalPage})));
+const AnalysisWorkspace = lazy(()=>import("./components/analysis-workspace").then(module=>({default:module.AnalysisWorkspace})));
 import { InteractionEffects } from "./components/interactions";
 import { LiquidGlassEffects } from "./components/liquid-glass";
+import { LocaleEffects } from "./components/locale-effects";
 import { AnimatedDialog } from "./components/animated-dialog";
-import { QuickFunds } from "./components/quick-funds";
+import { FavoriteToggle } from "./components/favorite-toggle";
+import { getPersonalStore } from "../lib/personal-store";
+import type { AnalysisContext } from "../lib/agent-tools";
+import type { AnalysisSelection } from "./components/analysis-workspace";
+import type { OpenFundTarget, PersonalSection } from "./components/personal-page";
 import { ComparisonWorkspace } from "./components/comparison-workspace";
 import type { FundData } from "../lib/fund-data";
 import { beijingDate } from "../lib/calendar";
 
-type Tab = "rt" | "dca" | "compare" | "help";
+type Tab = "rt" | "dca" | "compare" | "analysis" | "personal";
 type Fund = FundData;
 
 type DCASettings = { investmentStart: string; investmentEnd: string; dailyAmount: number; settlementDate: string; purchaseFeeRate: number; redemptionFeeRate: number };
@@ -63,6 +69,19 @@ export default function Home() {
   const loadedCode = useRef<string | null>(null);
   const [dataInfo, setDataInfo] = useState(false);
   const [tab, setTab] = useState<Tab>("rt");
+  const currentTab=useRef(tab);currentTab.current=tab;
+  const [personalRequest,setPersonalRequest]=useState<{id:number;section:PersonalSection}>();
+  const [compareRequest,setCompareRequest]=useState<{id:number;side:"a"|"b";code:string}>();
+  const [agentBusy,setAgentBusy]=useState(false);
+  const [personalDepth,setPersonalDepth]=useState(false);
+  const personalReturn=useRef<Tab|null>(null);
+  const returnFromPersonal=useCallback(()=>{const target=personalReturn.current;personalReturn.current=null;if(target)setTab(target);},[]);
+  const compareContext=useRef<AnalysisContext['comparison']>(undefined);
+  const analysisContext=useRef<AnalysisSelection|undefined>(undefined);
+  const onCompareContext=useCallback((value:NonNullable<AnalysisContext['comparison']>)=>{compareContext.current=value;},[]);
+  const onAnalysisContext=useCallback((value:AnalysisSelection)=>{analysisContext.current=value;},[]);
+  const openPersonal=useCallback((section:PersonalSection)=>{personalReturn.current=currentTab.current!=="personal"?currentTab.current:null;setTab("personal");setPersonalRequest({id:Date.now(),section});setDataInfo(false);},[]);
+  const openDocuments=useCallback(()=>openPersonal("docs"),[openPersonal]);
   const compareMode=tab==="compare";
   const [code, setCode] = useState("");
   const [fund, setFund] = useState<Fund | null>(null);
@@ -77,7 +96,7 @@ export default function Home() {
   const [dcaSettingsOpen,setDcaSettingsOpen]=useState(false);
   const [toast, setToast] = useState("");
   const requestRef = useRef(0);
-  const loadFund = useCallback(async (nextCode: string, forceRefresh = false) => {
+  const loadFund = useCallback(async (nextCode: string, forceRefresh = false,trackView=true) => {
     if (!/^\d{6}$/.test(nextCode)) { setError("请输入完整的 6 位基金代码，例如 000001。"); return; }
     const requestId = ++requestRef.current;
     setLoading(true); setError(""); setCode(nextCode);
@@ -88,6 +107,7 @@ export default function Home() {
       const changedFund = loadedCode.current !== nextCode;
       loadedCode.current = nextCode;
       setFund(data);
+      if(trackView)getPersonalStore().recordView(data,currentTab.current==="dca"?"dca":"rt");
       const first = data.points[0].date, last = data.latestNavDate;
       const start = addDays(last, -365) < first ? first : addDays(last, -365);
       const end = addDays(last, -90) < start ? last : addDays(last, -90);
@@ -102,11 +122,11 @@ export default function Home() {
     const readClock=()=>setToday(beijingDate());
     const clock=setInterval(readClock,30_000);
     const onVisible=()=>{if(document.visibilityState==="visible")readClock();};
-    const refresh=setInterval(()=>{if(document.visibilityState==="visible"&&!compareMode&&loadedCode.current)void loadFund(loadedCode.current);},15*60_000);
+    const refresh=setInterval(()=>{if(document.visibilityState==="visible"&&!compareMode&&loadedCode.current)void loadFund(loadedCode.current,false,false);},15*60_000);
     document.addEventListener("visibilitychange",onVisible);
     return()=>{clearInterval(clock);clearInterval(refresh);document.removeEventListener("visibilitychange",onVisible);};
   },[loadFund,compareMode]);
-  useEffect(()=>{if(lastToday.current!==today){lastToday.current=today;if(loadedCode.current)void loadFund(loadedCode.current,true);}},[today,loadFund]);
+  useEffect(()=>{if(lastToday.current!==today){lastToday.current=today;if(loadedCode.current)void loadFund(loadedCode.current,true,false);}},[today,loadFund]);
   const rt = useMemo(() => {
     if (!fund) return null;
     try { return rollingReturns(fund.points, alpha, 10, today); } catch { return null; }
@@ -121,24 +141,27 @@ export default function Home() {
   const exportRT = () => { if (!rt?.points.length || !fund) return; downloadCSV(`OpenRT-${fund.code}-${alpha}d.csv`, ["起投日", "目标日", "实际到期日", "实际日历天数", "区间收益率", "数据口径"], rt.points.map(p => [p.startDate, p.targetDate, p.endDate, p.days, p.return, fund.basis])); setToast("RT-α 样本已导出为 CSV"); };
   const exportDCA = () => { if (!dca.result || !fund) return; downloadCSV(`OpenRT-${fund.code}-DCA.csv`, ["净值日", "累计投入", "持仓市值", "收益"], dca.result.series.map(p => [p.date, p.cost, p.value, p.profit])); setToast("定投曲线已导出为 CSV"); };
   const stats = rt?.stats;
-  const navItems = [{id:"rt" as Tab,label:"RT",Icon:Activity},{id:"dca" as Tab,label:"定投",Icon:Wallet},{id:"compare" as Tab,label:"对比",Icon:Columns2},{id:"help" as Tab,label:"算法",Icon:BookOpen}];
-  const selectTab=(next:Tab)=>{setTab(next);setDataInfo(false);setStatsOpen(false);setDcaSettingsOpen(false);};
+  const navItems = [{id:"rt" as Tab,label:"RT",Icon:Activity},{id:"dca" as Tab,label:"定投",Icon:Wallet},{id:"compare" as Tab,label:"对比",Icon:Columns2},{id:"analysis" as Tab,label:"分析",Icon:ChartNoAxesCombined},{id:"personal" as Tab,label:agentBusy?"个人 ·":"个人",Icon:UserRound}];
+  const contextRef=useRef<AnalysisContext>({today,activeView:tab,alphaDays:alpha});contextRef.current={today,activeView:tab,fundCode:fund?.code,alphaDays:alpha,dcaSettings,comparison:compareContext.current,analysis:analysisContext.current};
+  const readContext=useCallback(()=>({...contextRef.current,comparison:compareContext.current,analysis:analysisContext.current}),[]);
+  const openFund=useCallback((nextCode:string,target:OpenFundTarget="rt")=>{if(target==="compare-a"||target==="compare-b"){setTab("compare");setCompareRequest({id:Date.now(),side:target==="compare-a"?"a":"b",code:nextCode});}else{setTab(target);currentTab.current=target;void loadFund(nextCode);}},[loadFund]);
+  const selectTab=(next:Tab)=>{if(next==="personal"){personalReturn.current=null;setPersonalRequest({id:Date.now(),section:"home"});}setTab(next);setDataInfo(false);setStatsOpen(false);setDcaSettingsOpen(false);};
   const renderStats = () => <aside className="stats-panel glass" aria-label="收益统计"><div className="panel-title"><h2>收益密度</h2><span>{fmt.format(stats?.count ?? 0)} 个窗口</span></div><Distribution values={(rt?.points ?? []).map(p=>p.return)}/><dl className="statistics">{[["最差",pct(stats?.min,true)],["最好",pct(stats?.max,true)],["P5",pct(stats?.p05,true)],["P95",pct(stats?.p95,true)],["P25",pct(stats?.p25,true)],["P75",pct(stats?.p75,true)],["样本标准差",pct(stats?.sd)],["正收益占比",pct(stats?.positiveProbability)]].map(([label,value])=><div key={label}><dt>{label}</dt><dd className={!["样本标准差","正收益占比"].includes(label)?(value.startsWith("-")?"negative-value":value.startsWith("+")?"positive-value":""):""}>{value}</dd></div>)}</dl></aside>;
   const renderDcaForm=()=>{if(!fund||!dcaDraft)return null;return <form className="dca-form dca-plan-editor" onSubmit={e=>{e.preventDefault();try{simulateDCA(fund.points,dcaDraft);setDcaSettings({...dcaDraft});setDcaFormError("");setDcaSettingsOpen(false);}catch(f){setDcaFormError(errorText(f));}}}><div className="dca-fields"><label>起始日<input type="date" aria-label="定投起始日" min={fund.points[0].date} max={fund.latestNavDate} value={dcaDraft.investmentStart} onChange={e=>setDcaDraft({...dcaDraft,investmentStart:e.target.value})} required/></label><label>终止日<input type="date" aria-label="定投终止日" min={dcaDraft.investmentStart} max={fund.latestNavDate} value={dcaDraft.investmentEnd} onChange={e=>setDcaDraft({...dcaDraft,investmentEnd:e.target.value})} required/></label><label>每日金额（元）<input type="number" aria-label="每日投入金额" min="0.01" max="100000000" step="0.01" value={dcaDraft.dailyAmount||""} onChange={e=>setDcaDraft({...dcaDraft,dailyAmount:Number(e.target.value)})} required/></label><label>结算日<input type="date" aria-label="收益结算日" min={dcaDraft.investmentEnd} max={fund.latestNavDate} value={dcaDraft.settlementDate} onChange={e=>setDcaDraft({...dcaDraft,settlementDate:e.target.value})} required/></label></div><details className="advanced-settings"><summary>费率设置 <ChevronDown size={12}/></summary><div className="advanced-fields"><label className="fee-field">申购费 %<input type="number" min="0" max="99" step="0.01" value={+(dcaDraft.purchaseFeeRate*100).toFixed(4)} onChange={e=>setDcaDraft({...dcaDraft,purchaseFeeRate:Number(e.target.value)/100})}/></label><label className="fee-field">赎回费 %<input type="number" min="0" max="99" step="0.01" value={+(dcaDraft.redemptionFeeRate*100).toFixed(4)} onChange={e=>setDcaDraft({...dcaDraft,redemptionFeeRate:Number(e.target.value)/100})}/></label></div></details><button className="primary-button calculate-button">计算 <ArrowRight size={14}/></button>{dcaFormError&&<p className="field-error" role="alert">{dcaFormError}</p>}</form>;};
-  return <div className="app-shell"><InteractionEffects/><LiquidGlassEffects/>
+  return <div className={`app-shell${tab==="personal"&&personalDepth?" personal-depth":""}`}><LocaleEffects/><InteractionEffects/><LiquidGlassEffects/>
     <header className="app-header"><Brand/><div className="header-actions"><span className="header-date"><time>{today}</time><small>北京日期</small></span><a className="github-link icon-button" href="https://github.com/PeiyangFantasist/OpenRT" target="_blank" rel="noreferrer" aria-label="GitHub 仓库"><ExternalLink size={18}/></a><ThemeControl/></div></header>
     <main id="main" className={`workspace view-${tab} ${compareMode?"mode-compare":""}`}>
-    <div className="comparison-host" hidden={!compareMode}><ComparisonWorkspace active={compareMode} today={today} initialFund={fund} initialAlpha={alpha} initialDca={dcaSettings}/></div>
-    <div className="single-workspace" hidden={compareMode}>
-      {tab!=="help" && <section className="fund-toolbar" aria-label="基金查询">
+    <div className="comparison-host" hidden={!compareMode}><ComparisonWorkspace active={compareMode} today={today} initialFund={fund} initialAlpha={alpha} initialDca={dcaSettings} externalSelection={compareRequest} onContextChange={onCompareContext} onFavorites={()=>openPersonal("favorites")}/></div>
+    <div className="extension-host" hidden={tab!=="analysis"}><Suspense fallback={<p>载入分析…</p>}><AnalysisWorkspace today={today} active={tab==="analysis"} onContextChange={onAnalysisContext} onDocuments={openDocuments}/></Suspense></div><div className="extension-host" hidden={tab!=="personal"}><Suspense fallback={<p>载入个人…</p>}><PersonalPage active={tab==="personal"} request={personalRequest} context={readContext} onOpenFund={openFund} onBusyChange={setAgentBusy} onDepthChange={setPersonalDepth} onReturnToSource={personalReturn.current?returnFromPersonal:undefined} backLabel={personalReturn.current?`返回${({rt:"RT",dca:"定投",compare:"对比",analysis:"分析",personal:"个人"})[personalReturn.current]}`:"返回个人"}/></Suspense></div><div className="single-workspace" hidden={tab!=="rt"&&tab!=="dca"}>
+      {<section className="fund-toolbar" aria-label="基金查询">
         <div className="search-surface liquid-surface glass"><form className="fund-search" onSubmit={e=>{e.preventDefault();void loadFund(code);}}><Search size={20}/><input id="fund-code" aria-label="基金代码" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,"").slice(0,6))} placeholder="输入 6 位基金代码"/><button className="primary-button" disabled={loading} aria-label="查询基金">{loading?<RefreshCw size={16} className="spin"/>:<ArrowRight size={20}/>}</button></form></div>
-        <QuickFunds onSelect={next=>void loadFund(next)} selectedCode={fund?.code} disabled={loading}/>
+        <button className="icon-button" aria-label="打开收藏" onClick={()=>openPersonal("favorites")}><Star size={20}/></button>{fund&&<FavoriteToggle fund={fund}/>}
         {fund&&!loading&&<><div className="fund-identity"><strong title={fund.name}>{fund.name}</strong><span>{fund.code}{fund.qdii?" · QDII":""} · 净值日 {fund.latestNavDate}</span></div><div className="nav-value"><strong>{fund.points.at(-1)!.nav.toFixed(4)}</strong><span>单位净值</span></div><button className="icon-button refresh-data" aria-label="刷新基金数据" title="重新读取官方数据" disabled={loading} onClick={()=>void loadFund(fund.code,true)}><RefreshCw size={16}/></button></>}
       </section>}
-      {error&&tab!=="help"&&<div className="error-banner" role="alert"><AlertCircle size={15}/><span>{error}{fund?` 当前仍显示 ${fund.code} 的上次结果。`:""}</span><button onClick={()=>setError("")} aria-label="关闭错误提示">×</button></div>}
-      {tab==="help"?<Suspense fallback={<section className="loading-panel glass" role="status">正在载入说明…</section>}><MethodHelp/></Suspense>:loading?<section className="loading-panel glass" role="status"><RefreshCw size={21} className="spin"/><p>正在读取历史净值…</p></section>:!fund?<section className="loading-panel empty-state"><div className="empty-mark" aria-hidden="true"><Activity size={40} strokeWidth={1.5}/></div><h1>查询基金</h1><p>请输入基金编号查询或快捷按键查看基金</p></section>:<>
+      {error&&<div className="error-banner" role="alert"><AlertCircle size={15}/><span>{error}{fund?` 当前仍显示 ${fund.code} 的上次结果。`:""}</span><button onClick={()=>setError("")} aria-label="关闭错误提示">×</button></div>}
+      {loading?<section className="loading-panel glass" role="status"><RefreshCw size={21} className="spin"/><p>正在读取历史净值…</p></section>:!fund?<section className="loading-panel empty-state"><div className="empty-mark" aria-hidden="true"><Activity size={40} strokeWidth={1.5}/></div><h1>查询基金</h1><p>请输入基金编号查询，或从收藏中选择</p></section>:<>
       {tab==="rt"&&<>
-        <section className="alpha-toolbar" aria-label="持有期设置"><span className="toolbar-label">持有期 α</span><div className="segmented-control">{ALPHA_PRESETS.map(p=><button key={p.days} aria-pressed={alpha===p.days} className={alpha===p.days?"active":""} onClick={()=>setPreset(p.days)}>{p.label}</button>)}</div><form className="custom-alpha" onSubmit={e=>{e.preventDefault();applyCustomAlpha();}}><input aria-label="自定义持有天数" type="number" min="1" max="3650" step="1" value={alphaInput} onChange={e=>setAlphaInput(e.target.value)}/><span>天</span><button aria-label="应用自定义持有天数"><ArrowRight size={14}/></button></form>{alphaError&&<span className="field-error" role="alert">{alphaError}</span>}<div className="data-info-wrap"><button className="text-button" onClick={()=>setDataInfo(!dataInfo)} aria-expanded={dataInfo}><Info size={13}/>{fund.cacheStatus==="stale"?"旧缓存":fund.basis==="unit-nav"?"未复权":"近似复权"}</button><div className={`data-popover glass ${dataInfo?"open":""}`} aria-hidden={!dataInfo} inert={!dataInfo} role="status"><strong>数据说明</strong>{fund.warnings.map((w,i)=><p key={i}>{w}</p>)}<button className="text-button" onClick={()=>{setTab("help");setDataInfo(false);}}>查看算法与数据 <ArrowUpRight size={12}/></button></div></div></section>
+        <section className="alpha-toolbar" aria-label="持有期设置"><span className="toolbar-label">持有期 α</span><div className="segmented-control">{ALPHA_PRESETS.map(p=><button key={p.days} aria-pressed={alpha===p.days} className={alpha===p.days?"active":""} onClick={()=>setPreset(p.days)}>{p.label}</button>)}</div><form className="custom-alpha" onSubmit={e=>{e.preventDefault();applyCustomAlpha();}}><input aria-label="自定义持有天数" type="number" min="1" max="3650" step="1" value={alphaInput} onChange={e=>setAlphaInput(e.target.value)}/><span>天</span><button aria-label="应用自定义持有天数"><ArrowRight size={14}/></button></form>{alphaError&&<span className="field-error" role="alert">{alphaError}</span>}<div className="data-info-wrap"><button className="text-button" onClick={()=>setDataInfo(!dataInfo)} aria-expanded={dataInfo}><Info size={13}/>{fund.cacheStatus==="stale"?"旧缓存":fund.basis==="unit-nav"?"未复权":"近似复权"}</button><div className={`data-popover glass ${dataInfo?"open":""}`} aria-hidden={!dataInfo} inert={!dataInfo} role="status"><strong>数据说明</strong>{fund.warnings.map((w,i)=><p key={i}>{w}</p>)}<button className="text-button" onClick={()=>{openDocuments();}}>查看算法与数据 <ArrowUpRight size={12}/></button></div></div></section>
 
 
         <section className="analysis-grid"><article className="curve-panel glass"><div className="panel-title"><h1>RT-α <span>α = {alpha} 天</span></h1><button className="secondary-button statistics-button" onClick={()=>setStatsOpen(true)}>统计分析</button><button className="secondary-button" onClick={exportRT} disabled={!rt?.points.length}><Download size={13}/><span>CSV</span></button></div><div className="chart-subline"><div className="legend"><span><i/>正收益</span><span><i className="negative"/>非正收益</span></div></div><div className="chart-body"><CurveChart key={`${fund.code}-${alpha}`} points={(rt?.points??[]).map(p=>({date:p.startDate,value:p.return,detail:`到期 ${p.endDate} · 实际 ${p.days} 天`}))}/></div><div className="chart-meta"><span>最晚完整起投日 {rt?.points.at(-1)?.startDate??"暂无完整窗口"}</span><span>长缺口 {rt?.skippedGaps??0} · 未到期 {rt?.incompleteCount??0}</span></div></article></section>
@@ -150,7 +173,7 @@ export default function Home() {
         {dca.error&&<div className="error-banner" role="alert">{dca.error}</div>}
         {dca.result&&<><section className="metric-strip glass dca-metrics" aria-label="定投结果"><Metric label="累计投入" value={money(dca.result.cost)} note={`${dca.result.contributions} 次投入`}/><Metric label="结算价值" value={money(dca.result.value)} note={dca.result.settlementDate}/><Metric label="累计收益" value={money(dca.result.profit)} note={`费用 ${money(dca.result.totalFees)}`} change={dca.result.profit}/><Metric label="累计收益率" value={pct(dca.result.return,true)} note="未年化 · 收益 / 成本" change={dca.result.return}/></section><article className="curve-panel glass dca-curve"><div className="panel-title"><h1>定投资产曲线</h1><button className="secondary-button" onClick={exportDCA}><Download size={13}/>CSV</button></div><div className="chart-subline"><div className="legend"><span><i/>盈利</span><span><i className="negative"/>亏损</span><span><i className="cost"/>投入</span></div></div><div className="chart-body"><CurveChart key={`${fund.code}-${JSON.stringify(dcaSettings)}`} points={dca.result.series.map(p=>({date:p.date,value:p.value,secondary:p.cost,detail:`收益 ${money(p.profit)}`}))} money label="持仓市值"/></div><div className="chart-meta"><span>结算 {dca.result.settlementDate}</span></div></article></>}
       </>}
-      <footer className="app-footer"><span><a href={fund.sourceUrl} target="_blank" rel="noreferrer">{fund.source}</a> · 净值日 {fund.latestNavDate} · 今日 {today}</span><button className="text-button" aria-label="算法与数据说明" onClick={()=>selectTab("help")}><Info size={14}/></button></footer>
+      <footer className="app-footer"><span><a href={fund.sourceUrl} target="_blank" rel="noreferrer">{fund.source}</a> · 净值日 {fund.latestNavDate} · 今日 {today}</span><button className="text-button" aria-label="算法与数据说明" onClick={()=>openDocuments()}><Info size={14}/></button></footer>
       </>}
     </div></main><div className="dock-zone"><nav className="bottom-dock glass liquid-surface" data-glass-priority="2" aria-label="主要功能" style={{"--nav-index":navItems.findIndex(item=>item.id===tab)} as React.CSSProperties}><span className="dock-selection" aria-hidden="true"/>{navItems.map(({id,label,Icon})=><button type="button" key={id} className={tab===id?"active":""} onClick={()=>selectTab(id)} aria-pressed={tab===id} aria-label={label}><Icon size={24} strokeWidth={tab===id?2.5:1.8}/><span>{label}</span></button>)}</nav></div><AnimatedDialog open={dcaSettingsOpen} onClose={()=>setDcaSettingsOpen(false)} title="定投设置">{renderDcaForm()}</AnimatedDialog><AnimatedDialog open={statsOpen} onClose={()=>setStatsOpen(false)} title="统计分析">{renderStats()}</AnimatedDialog>{toast&&<div className="toast" role="status"><Check size={15}/>{toast}</div>}
   </div>;

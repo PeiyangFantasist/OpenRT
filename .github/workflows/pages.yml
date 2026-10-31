@@ -38,6 +38,8 @@ jobs:
         id: refresh
         continue-on-error: true
         run: npm run update-data
+      - name: Update public fund directory
+        run: npm run update-catalog
       - name: Require usable initial cache
         run: node --input-type=module -e "import{readFile}from'node:fs/promises';const d=JSON.parse(await readFile('public/data/000001.json','utf8'));if(!d.points?.length)throw Error('No initial NAV cache');"
       - name: Cache last valid source data

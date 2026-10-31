@@ -33,3 +33,6 @@ The sandbox protects the parent page; it does not certify the financial data. Up
 Queries use scheduled validated JSON and browser cache before that fallback. Failure returns a visibly stale validated snapshot when available. The scheduled updater and server adapter retrieve text and parse only expected JSON literals without executing source code. Source-derived names and warnings must render as text, never HTML.
 
 Low-frequency caching reduces upstream traffic. Cache failure must not be silently replaced by synthetic data. Display source attribution, timestamp and stale/error state. OpenRT establishes no right to bulk republish third-party histories: personal research deployment does not grant public commercial data use. Confirm the provider's authorization and current terms before broader public operation; replace this adapter with a licensed provider if necessary.
+
+
+基金目录：天天基金公开的 `https://fund.eastmoney.com/js/fundcode_search.js`，仅用于代码、名称与类型发现。服务器读取后严格解析JSON字面量，不执行脚本；本机只读取本站的JSON快照，显示目录抓取时间。目录含未浏览基金，不构成推荐、申购资格或完整可交易性保证。公开接口不等于开源或已获商业再分发许可。自动更新失败保留旧日期。

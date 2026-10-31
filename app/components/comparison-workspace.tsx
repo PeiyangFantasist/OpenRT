@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, AlertCircle, ArrowRight, ChevronDown, Info, RefreshCw, Search, Settings2, Wallet } from "lucide-react";
+import { Activity, AlertCircle, ArrowRight, ChevronDown, Info, RefreshCw, Search, Settings2, Star, Wallet } from "lucide-react";
 import { ALPHA_PRESETS, type DCAOptions, type ReturnStats } from "../../lib/analytics";
 import { alignFundHistories, compareDCA, compareRolling } from "../../lib/comparison";
 import { fetchFundClient } from "../../lib/fund-client";
@@ -10,7 +10,9 @@ import { AnimatedDialog } from "./animated-dialog";
 import { ComparisonChart, type ComparisonPoint } from "./comparison-chart";
 import { ComparisonMetrics, type ComparisonMetricRow } from "./comparison-metrics";
 import { Distribution } from "./charts";
-import { QuickFunds } from "./quick-funds";
+import { FavoriteToggle } from "./favorite-toggle";
+import { getPersonalStore } from "../../lib/personal-store";
+import type { AnalysisContext } from "../../lib/agent-tools";
 import "../comparison.css";
 
 export type ComparisonWorkspaceProps = {
@@ -21,6 +23,9 @@ export type ComparisonWorkspaceProps = {
   initialFund?: FundData | null;
   initialAlpha?: number;
   initialDca?: DCAOptions | null;
+  externalSelection?:{id:number;side:"a"|"b";code:string};
+  onContextChange?:(context:NonNullable<AnalysisContext['comparison']>)=>void;
+  onFavorites?:()=>void;
 };
 type Side = "a" | "b";
 type Slot = { code: string; fund: FundData | null; loading: boolean; error: string };
@@ -35,7 +40,7 @@ function rtRows(a: ReturnStats, b: ReturnStats): ComparisonMetricRow[] {
   return [row("lossProbability", "亏损率", "lower", "percent", "包含零收益"), row("mean", "平均收益", "higher"), row("median", "收益中位数", "higher"), row("count", "完整窗口", "neutral", "number"), row("min", "最差窗口", "higher"), row("max", "最好窗口", "higher"), row("p05", "下尾 P5", "higher"), row("p95", "上尾 P95", "higher"), row("p25", "下四分位 P25", "higher"), row("p75", "上四分位 P75", "higher"), row("sd", "样本标准差", "lower"), row("positiveProbability", "正收益窗口比例", "higher"), row("nonOverlappingCount", "非重叠窗口", "neutral", "number")];
 }
 
-export function ComparisonWorkspace({ active, tab: controlledTab, onTabChange, today, initialFund = null, initialAlpha = 365, initialDca = null }: ComparisonWorkspaceProps) {
+export function ComparisonWorkspace({ active, tab: controlledTab, onTabChange, today, initialFund = null, initialAlpha = 365, initialDca = null,externalSelection,onContextChange,onFavorites }: ComparisonWorkspaceProps) {
   const [localTab, setLocalTab] = useState<"rt" | "dca">("rt");
   const tab = controlledTab ?? localTab;
   const selectTab = (next: "rt" | "dca") => { setLocalTab(next); onTabChange?.(next); };
@@ -62,11 +67,13 @@ export function ComparisonWorkspace({ active, tab: controlledTab, onTabChange, t
     patchSlot(side, { loading: true, error: "", ...(!background ? { code } : {}) });
     try {
       const fund = await fetchFundClient(code, { forceRefresh });
-      if (request === requests.current[side]) patchSlot(side, { fund, loading: false });
+      if (request === requests.current[side]) {patchSlot(side, { fund, loading: false });if(!background)getPersonalStore().recordView(fund,"compare");}
     } catch (error) {
       if (request === requests.current[side]) patchSlot(side, { error: errorText(error), loading: false });
     }
   }, [patchSlot]);
+  useEffect(()=>{if(externalSelection)void query(externalSelection.side,externalSelection.code);},[externalSelection,query]);
+  useEffect(()=>{onContextChange?.({codes:[slots.a.fund?.code??'',slots.b.fund?.code??''],mode:tab,alphaDays:alpha,plan});},[slots.a.fund,slots.b.fund,tab,alpha,plan,onContextChange]);
   useEffect(() => {
     if (active && initialFund && !slotsRef.current.a.fund && !slotsRef.current.a.code) patchSlot("a", { code: initialFund.code, fund: initialFund });
   }, [active, initialFund, patchSlot]);
@@ -142,7 +149,7 @@ export function ComparisonWorkspace({ active, tab: controlledTab, onTabChange, t
     <div className="comparison-bars">{(["a", "b"] as const).map(side => { const slot = slots[side]; return <section key={side} className="fund-toolbar glass liquid-surface" aria-label={`基金 ${side.toUpperCase()} 查询`}>
       <span className={`slot-letter slot-letter-${side}`}>{side.toUpperCase()}</span>
       <form className="fund-search" onSubmit={event => { event.preventDefault(); void query(side, slot.code); }}><Search size={15}/><input aria-label={`基金 ${side.toUpperCase()} 代码`} inputMode="numeric" pattern="[0-9]{6}" maxLength={6} value={slot.code} onChange={event => patchSlot(side, { code: event.target.value.replace(/\D/g, "").slice(0, 6) })} placeholder="6 位基金代码"/><button className="primary-button" disabled={slot.loading}>{slot.loading ? <RefreshCw size={14} className="spin"/> : "查询"}</button></form>
-      <QuickFunds onSelect={code => void query(side, code)} selectedCode={slot.fund?.code} disabled={slot.loading}/>
+      <button className="icon-button" aria-label={`从收藏选择基金 ${side.toUpperCase()}`} onClick={()=>{setFundPickerOpen(false);onFavorites?.();}}><Star size={18}/></button>{slot.fund&&<FavoriteToggle fund={slot.fund}/>}
       {slot.fund ? <><div className="fund-identity"><strong title={slot.fund.name}>{slot.fund.name}</strong><span>{slot.fund.code} · {slot.fund.latestNavDate}{slot.fund.qdii ? " · QDII" : ""}</span></div><div className="nav-value"><strong>{slot.fund.points.at(-1)!.nav.toFixed(4)}</strong><span>净值日 {slot.fund.latestNavDate}</span></div><button type="button" className="icon-button refresh-data" aria-label={`刷新基金 ${side.toUpperCase()}`} title={slot.fund.warnings.join("\n")} disabled={slot.loading} onClick={() => void query(side, slot.fund!.code, true, true)}><RefreshCw size={14}/></button></> : <span className="inline-note">{side === "a" ? "选择第一支基金" : "手动输入第二支基金编号"}</span>}
     </section>; })}</div>
     {(["a", "b"] as const).map(side => slots[side].error && <div key={side} className="error-banner" role="alert"><AlertCircle size={14}/><span>{side.toUpperCase()}：{slots[side].error}{slots[side].fund ? ` 仍显示 ${slots[side].fund!.code} 的上次结果。` : ""}</span><button type="button" aria-label={`关闭基金 ${side.toUpperCase()} 错误`} onClick={() => patchSlot(side, { error: "" })}>×</button></div>)}

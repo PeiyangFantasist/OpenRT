@@ -1,0 +1,3 @@
+import { efficientFrontier, equalRiskContribution, advancedPortfolio, type Preferences } from './portfolio-optimizer';
+import type { AnalysisSample } from './analysis-statistics';
+self.onmessage=(event:MessageEvent<{sample:AnalysisSample;strategy:string;preferences:Preferences;targetRisk?:number}>)=>{try{const {sample,strategy,preferences,targetRisk}=event.data;const result=strategy==='mef'?efficientFrontier(sample,targetRisk):strategy==='erc'?equalRiskContribution(sample):advancedPortfolio(sample,preferences);self.postMessage({result});}catch(e){self.postMessage({error:e instanceof Error?e.message:'优化失败。'});}};
