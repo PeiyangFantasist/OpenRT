@@ -1,11 +1,15 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, useMemo, useSyncExternalStore } from "react";
 import { MathFormula } from "./math";
 
-import { topics } from "../../lib/documentation";
+import { getHelpTopics } from "../../lib/documentation";
+
+import {getUserSettings,subscribeUserSettings} from '../../lib/user-settings';
 
 export function MethodHelp() {
+  const {language}=useSyncExternalStore(subscribeUserSettings,getUserSettings,getUserSettings);
+  const topics=useMemo(()=>getHelpTopics(language),[language]);
   const contentRef=useRef<HTMLElement>(null);
   const [selected, setSelected] = useState(0);
   const [pageIndex, setPageIndex] = useState(0);
@@ -38,7 +42,7 @@ export function MethodHelp() {
       <p>{page.paragraphs[0]}</p>
       {page.math?.map(tex => <MathFormula key={tex} tex={tex}/>)}
       {page.variables && <p className="help-variables">{page.variables.map((variable, index) => <Fragment key={variable.tex}>
-        {index > 0 && "；"}<MathFormula tex={variable.tex} inline/>：{variable.description}
+        {index > 0 && (language==='en'?'; ':'；')}<MathFormula tex={variable.tex} inline/>{language==='en'?': ':'：'}{variable.description}
       </Fragment>)}</p>}
       {page.paragraphs.slice(1).map(paragraph => <p key={paragraph}>{paragraph}</p>)}
       {page.example && <p className="help-example">{page.example}</p>}

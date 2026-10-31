@@ -89,14 +89,14 @@ function abortable<T>(promise:Promise<T>,signal?:AbortSignal):Promise<T>{if(!sig
 export async function runAgent(input:{
   settings:AgentSettings;messages:{role:"user"|"assistant";content:string}[];
   execute:(name:string,args:unknown,signal?:AbortSignal)=>Promise<ToolOutcome>;
-  onEvent:(event:AgentEvent)=>void;signal?:AbortSignal;fetcher?:typeof fetch;
+  onEvent:(event:AgentEvent)=>void;language?:'zh'|'en';signal?:AbortSignal;fetcher?:typeof fetch;
 }):Promise<string>{
   const {settings,execute,onEvent,signal}=input,endpoint=completionEndpoint(settings.baseUrl);
   if(!settings.apiKey.trim()||/[\r\n]/.test(settings.apiKey))throw new Error("请先在设置中填写 API Key。");
   if(!settings.model.trim()||settings.model.length>120)throw new Error("请填写有效模型名称。");
   if(!Number.isInteger(settings.maxRounds)||settings.maxRounds<1||settings.maxRounds>12)throw new Error("工具轮次需要是1–12。");
   const redact=(text:string)=>text.split(settings.apiKey).join("[密钥已隐藏]");
-  const messages:WireMessage[]=[{role:"system",content:AGENT_SYSTEM_PROMPT},...input.messages.slice(-30).map(m=>({role:m.role,content:m.content.slice(0,16000)}))];
+  const messages:WireMessage[]=[{role:"system",content:input.language==='en'?AGENT_SYSTEM_PROMPT.replace('用中文简洁回答','Answer concisely in English unless the user explicitly requests another language'):AGENT_SYSTEM_PROMPT},...input.messages.slice(-30).map(m=>({role:m.role,content:m.content.slice(0,16000)}))];
   const last=messages.at(-1);if(!last||last.role!=="user"||!last.content?.trim())throw new Error("请输入问题。");
   let answer="",totalCalls=0;
   for(let round=0;round<settings.maxRounds;round++){

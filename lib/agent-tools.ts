@@ -1,7 +1,7 @@
 import { rollingReturns, simulateDCA, type DCAOptions } from "./analytics.ts";
 import { compareDCA, compareRolling } from "./comparison.ts";
 import { estimateDensity } from "./density.ts";
-import { topics } from "./documentation.ts";
+import { topics, getHelpTopics } from "./documentation.ts";
 import type { FundData } from "./fund-data.ts";
 import type { PersonalSnapshot } from "./personal-store.ts";
 import {loadFundCatalog,searchCatalog,type FundCatalog} from './fund-catalog.ts';
@@ -23,7 +23,7 @@ export type AgentChart = {
   values?: number[];
 };
 export type ToolOutcome = { data: Record<string,unknown>; chart?: AgentChart };
-export type ToolDependencies = { fetchFund:(code:string)=>Promise<FundData>; context:()=>AnalysisContext; personal:()=>PersonalSnapshot;catalog?:()=>Promise<FundCatalog>;simulation?:ReturnType<typeof getSimulationStore>;allowSimulationWrites?:boolean };
+export type ToolDependencies = { fetchFund:(code:string)=>Promise<FundData>; context:()=>AnalysisContext; personal:()=>PersonalSnapshot;catalog?:()=>Promise<FundCatalog>;simulation?:ReturnType<typeof getSimulationStore>;allowSimulationWrites?:boolean;language?:'zh'|'en' };
 type Property = Record<string,unknown>;
 const code:Property={type:"string",pattern:"^[0-9]{6}$",description:"中国公募基金六位代码"};
 const date:Property={type:"string",description:"YYYY-MM-DD，自然日"};
@@ -82,7 +82,7 @@ export function createToolExecutor(deps:ToolDependencies){
       const list=saved[section],offset=number(a,"offset",0,0,10000,true),limit=number(a,"limit",100,1,100,true);
       return {data:{section,total:list.length,items:list.slice(offset,offset+limit),nextOffset:offset+limit<list.length?offset+limit:null,meaning:"用户关注或查看过的基金，不代表实际持仓、买卖或适当性。"}};
     }
-    if(name==="read_documentation"){const topic=text(a,"topic","all");const docs=topic==="all"?topics:topics.filter(t=>t.id===topic);if(!docs.length)throw new Error("没有该文档主题。");return {data:{topics:docs,repository:"https://github.com/PeiyangFantasist/OpenRT"}};}
+    if(name==="read_documentation"){const topic=text(a,"topic","all");const localized=getHelpTopics(deps.language??'zh'),docs=topic==="all"?localized:localized.filter(t=>t.id===topic);if(!docs.length)throw new Error("没有该文档主题。");return {data:{topics:docs,repository:"https://github.com/PeiyangFantasist/OpenRT"}};}
     if(name==="get_data_sources")return {data:{provider:"东方财富·天天基金",officialHistory:"https://fund.eastmoney.com/pingzhongdata/{六位代码}.js",sourceRights:"公开可访问不等于开源数据或已获再分发授权；正式运营须另行确认授权。",cache:"GitHub Pages每日北京时间09:20/19:20/23:20更新；页面可按需读取官方源，失败明确保留旧缓存。",valuation:"按净值所属日，QDII披露可能滞后；不是盘中实时行情。",adjustment:"正常日按单位净值比值，分红/拆分按源事件及日增长率近似校正；无法校正时全量退回未复权并警告。",documentation:"https://github.com/PeiyangFantasist/OpenRT/blob/main/docs/data-sources.md",terms:"https://fund.eastmoney.com/notbug.html"}};
     if(name==='analyze_statistics'||name==='optimize_portfolio'){
       const codes=a.codes??context.analysis?.codes;if(!Array.isArray(codes)||codes.length<1||codes.length>12||codes.some(c=>typeof c!=='string'||!/^\d{6}$/.test(c)))throw new Error('请提供1–12个六位基金代码。');

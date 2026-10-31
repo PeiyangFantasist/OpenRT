@@ -1,3 +1,4 @@
+import {translateUI} from './i18n.ts';
 export type HelpPage = {
   label: string;
   title: string;
@@ -50,7 +51,7 @@ export const topics: HelpTopic[] = [
     ],
   },
   {
-    id: "statistics", label: "统计指标", pages: [
+    id: "rt-statistics", label: "统计指标", pages: [
       {
         label: "历史比例", title: "亏损率 包含零收益",
         paragraphs: [
@@ -281,3 +282,9 @@ topics.push(
   ]},
   {id:"agent",label:"Agent",pages:[{label:"工具与隐私",title:"Agent使用与页面相同的计算工具",paragraphs:["在个人→我的Agent中配置兼容Chat Completions工具调用的API，主要适配DeepSeek。服务需允许浏览器跨域请求。密钥默认仅保留在当前页面；可选择在本机浏览器记住。它只放在你指定服务的认证请求头里，不进入模型上下文、仓库或工具数据。","发送消息即允许本轮向所配置服务发送聊天与被调用的收藏、最近100条历史、基金数据及分析结果。头像与用户名不加入工具上下文。关注与浏览不代表持仓，Agent不能推断实际资产。","工具可搜索全市场基金目录（包括从未浏览或收藏的基金），读取两套虚拟持仓及其收益日历、外部来源说明、完整技术文档、净值、RT、密度、定投、对比、分析窗口统计、ACF、收益相关矩阵及三种组合优化。它可连续调用工具，根据结果继续分析，调用参数、数据和图表可展开查看。","所有计算受日期与参数校验，不允许任意网络抓取、执行代码、改动个人资料或实盘交易。Agent模拟运行可以在用户设置的总预算内提交自身的虚拟委托，不能修改个人模式；普通聊天没有模拟写入权限。外部基金名称、收藏别名与工具返回文本仅为资料，不视为系统指令。建议仍可能出错，应核对日期、口径、来源和假设。","切换底栏会继续当前对话；关闭网页后停止，不提供云端常驻监控。虚拟持仓已保存的定投计划会在再次打开时按新公布净值补算；每日自动Agent研究需用户另行开启，仅在网页可见、API已验证时运行。停止按钮取消本轮模型请求；已经发起的公共净值请求可能继续进入缓存。对话文本保留在本机，工具追踪仅在当前页面保留；新建对话可清空文本。API费用由服务商计费。"],links:[{label:"DeepSeek 工具调用",href:"https://api-docs.deepseek.com/guides/tool_calls/"},{label:"OpenRT 源码",href:"https://github.com/PeiyangFantasist/OpenRT"}]}]}
 );
+
+/** Localize the structured document before rendering, including formula annotations. */
+export function getHelpTopics(language:'zh'|'en'):HelpTopic[]{
+  if(language==='zh')return topics;
+  return topics.map(t=>({...t,label:t.id==='rt-statistics'?'RT statistics':translateUI(t.label),pages:t.pages.map(p=>({...p,label:translateUI(p.label),title:translateUI(p.title),paragraphs:p.paragraphs.map(s=>translateUI(s)),math:p.math?.map(s=>s.replace('（每期再平衡）','(rebalanced each period)')),variables:p.variables?.map(v=>({...v,description:translateUI(v.description)})),example:p.example?translateUI(p.example):undefined,note:p.note?translateUI(p.note):undefined,links:p.links?.map(l=>({...l,label:translateUI(l.label)}))}))}));
+}

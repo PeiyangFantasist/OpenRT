@@ -11,6 +11,9 @@ import { AnimatedDialog } from "./animated-dialog";
 import { AgentResult } from "./agent-result";
 import {getAgentConfiguration,saveAgentConfiguration,markAgentVerified,subscribeAgentConfiguration} from "../../lib/agent-configuration";
 
+import {getUserSettings,subscribeUserSettings} from '../../lib/user-settings';
+import {translateUI,translateDisplayData} from '../../lib/i18n';
+
 type Trace={call:ToolCall;outcome?:ToolOutcome;error?:boolean};
 type ChatMessage={id:string;role:"user"|"assistant";content:string;calls:Trace[];status?:"running"|"error"|"stopped";error?:string};
 const CHAT_KEY="openrt-agent-chat-v1";
@@ -18,10 +21,12 @@ function loadChat():ChatMessage[]{
   try{const raw=localStorage.getItem(CHAT_KEY);if(!raw||raw.length>700_000)return [];const list=JSON.parse(raw);if(!Array.isArray(list))return [];return list.slice(-60).filter(v=>v&&typeof v.id==="string"&&(v.role==="user"||v.role==="assistant")&&typeof v.content==="string").map(v=>({id:v.id.slice(0,100),role:v.role,content:v.content.slice(0,16000),calls:[]}));}catch{return [];}
 }
 const TraceCard=memo(function TraceCard({trace,onOpenFund}:{trace:Trace;onOpenFund:(code:string)=>void}){
+  const {language}=useSyncExternalStore(subscribeUserSettings,getUserSettings,getUserSettings);
   const [expanded,setExpanded]=useState(false);
-  return <div className={`agent-tool${trace.error?" agent-tool-error":""}`}><button type="button" className="agent-tool-title" onClick={()=>setExpanded(v=>!v)} aria-expanded={expanded}>{trace.outcome?<Check size={13}/>:<span className="agent-working-dot"/>}<span>{TOOL_LABELS[trace.call.function.name]??trace.call.function.name}</span><ChevronDown size={12}/></button>{expanded&&<div className="agent-tool-details"><code>{trace.call.function.arguments}</code>{trace.outcome&&<pre>{JSON.stringify(trace.outcome.data,null,2)}</pre>}</div>}{trace.outcome&&<AgentResult outcome={trace.outcome} onOpenFund={onOpenFund}/>}</div>;
+  return <div className={`agent-tool${trace.error?" agent-tool-error":""}`}><button type="button" className="agent-tool-title" onClick={()=>setExpanded(v=>!v)} aria-expanded={expanded}>{trace.outcome?<Check size={13}/>:<span className="agent-working-dot"/>}<span>{TOOL_LABELS[trace.call.function.name]??trace.call.function.name}</span><ChevronDown size={12}/></button>{expanded&&<div className="agent-tool-details"><code>{trace.call.function.arguments}</code>{trace.outcome&&<pre>{JSON.stringify(language==='en'?translateDisplayData(trace.outcome.data):trace.outcome.data,null,2)}</pre>}</div>}{trace.outcome&&<AgentResult outcome={trace.outcome} onOpenFund={onOpenFund}/>}</div>;
 });
 export function AgentPanel({context,onOpenFund,onBusyChange,active}:{context:()=>AnalysisContext;onOpenFund:(code:string)=>void;onBusyChange:(busy:boolean)=>void;active:boolean}){
+  const {language}=useSyncExternalStore(subscribeUserSettings,getUserSettings,getUserSettings);
   const config=useSyncExternalStore(subscribeAgentConfiguration,getAgentConfiguration,getAgentConfiguration),{settings,remember}=config;
   const [draft,setDraft]=useState(settings),[draftRemember,setDraftRemember]=useState(remember);
   const [configOpen,setConfigOpen]=useState(false),[configError,setConfigError]=useState(""),[infoOpen,setInfoOpen]=useState(false),[clearOpen,setClearOpen]=useState(false);
@@ -48,8 +53,8 @@ export function AgentPanel({context,onOpenFund,onBusyChange,active}:{context:()=
     const abort=new AbortController();controller.current=abort;
     const update=(fn:(message:ChatMessage)=>ChatMessage)=>setMessages(rows=>rows.map(m=>m.id===bot.id?fn(m):m));
     try{
-      const execute=createToolExecutor({fetchFund:code=>fetchFundClient(code),context,personal:()=>getPersonalStore().getSnapshot()});
-      await runAgent({settings:{...settings},messages:history.map(m=>({role:m.role,content:m.content})),execute,signal:abort.signal,onEvent:event=>{
+      const execute=createToolExecutor({fetchFund:code=>fetchFundClient(code),context,personal:()=>getPersonalStore().getSnapshot(),language});
+      await runAgent({language,settings:{...settings},messages:history.map(m=>({role:m.role,content:m.content})),execute,signal:abort.signal,onEvent:event=>{
         if(event.type==="text")update(m=>({...m,content:m.content+event.delta}));
         else if(event.type==="tool-start")update(m=>({...m,calls:[...m.calls,{call:event.call}]}));
         else update(m=>({...m,calls:m.calls.map(t=>t.call.id===event.call.id?{...t,outcome:event.outcome,error:event.error}:t)}));
@@ -61,7 +66,7 @@ export function AgentPanel({context,onOpenFund,onBusyChange,active}:{context:()=
   return <section className="agent-panel" aria-label="我的Agent">
     <div className="agent-toolbar"><span className="agent-model"><Bot size={16}/>{settings.model}</span><div><button type="button" className="icon-button" aria-label="新建对话" disabled={busy} onClick={()=>setClearOpen(true)}><Plus size={18}/></button><button type="button" className="icon-button" aria-label="Agent说明" onClick={()=>setInfoOpen(true)}><Info size={16}/></button><button type="button" className="icon-button" aria-label="Agent设置" onClick={openConfig}><Settings2 size={18}/></button></div></div>
     <div className="agent-messages" ref={listRef} onScroll={()=>{const el=listRef.current;if(el)follow.current=el.scrollHeight-el.scrollTop-el.clientHeight<90;}} role="log" aria-label="Agent对话">
-      {messages.length===0?<div className="agent-empty"><Bot size={40} strokeWidth={1.5}/><h2>我的Agent</h2>{!settings.apiKey&&<button type="button" className="secondary-button" onClick={openConfig}>配置 API</button>}<div className="agent-prompts">{["查看我的收藏与历史，分析关注方向","比较收藏中两只基金的1年RT","根据当前基金和定投计划做分析"].map(prompt=><button key={prompt} type="button" onClick={()=>void send(prompt)}>{prompt}</button>)}</div></div>:messages.map(message=><article key={message.id} className={`agent-message agent-message-${message.role}`}><span className="agent-speaker">{message.role==="user"?"你":"Agent"}</span>{message.calls.map(trace=><TraceCard key={trace.call.id} trace={trace} onOpenFund={onOpenFund}/>)}{message.content&&<div className="agent-answer"><Markdown remarkPlugins={[remarkGfm]} components={{a:({href,children})=><a href={href} target="_blank" rel="noopener noreferrer">{children}</a>,img:({alt})=><span>{alt??""}</span>}}>{message.content}</Markdown></div>}{message.status==="running"&&!message.content&&<span className="agent-status"><span className="agent-working-dot"/>{message.calls.length?"正在分析":"正在思考"}</span>}{message.error&&<p className="agent-error" role={message.status==="error"?"alert":"status"}>{message.error}</p>}</article>)}
+      {messages.length===0?<div className="agent-empty"><Bot size={40} strokeWidth={1.5}/><h2>我的Agent</h2>{!settings.apiKey&&<button type="button" className="secondary-button" onClick={openConfig}>配置 API</button>}<div className="agent-prompts">{["查看我的收藏与历史，分析关注方向","比较收藏中两只基金的1年RT","根据当前基金和定投计划做分析"].map(prompt=><button key={prompt} type="button" onClick={()=>void send(language==='en'?translateUI(prompt):prompt)}>{prompt}</button>)}</div></div>:messages.map(message=><article key={message.id} className={`agent-message agent-message-${message.role}`}><span className="agent-speaker">{message.role==="user"?"你":"Agent"}</span>{message.calls.map(trace=><TraceCard key={trace.call.id} trace={trace} onOpenFund={onOpenFund}/>)}{message.content&&<div className="agent-answer"><Markdown remarkPlugins={[remarkGfm]} components={{a:({href,children})=><a href={href} target="_blank" rel="noopener noreferrer">{children}</a>,img:({alt})=><span>{alt??""}</span>}}>{message.content}</Markdown></div>}{message.status==="running"&&!message.content&&<span className="agent-status"><span className="agent-working-dot"/>{message.calls.length?"正在分析":"正在思考"}</span>}{message.error&&<p className="agent-error" role={message.status==="error"?"alert":"status"}>{message.error}</p>}</article>)}
     </div>
     <form className="agent-composer glass" onSubmit={e=>{e.preventDefault();void send();}}><textarea aria-label="给Agent的消息" value={question} onChange={e=>setQuestion(e.target.value)} maxLength={12000} rows={2} placeholder="询问收藏、历史或基金分析…" onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();void send();}}}/>{busy?<button type="button" className="agent-send" aria-label="停止生成" onClick={()=>controller.current?.abort()}><Square size={16} fill="currentColor"/></button>:<button className="agent-send" aria-label="发送消息" disabled={!question.trim()}><ArrowUp size={20}/></button>}</form>
     {storageError&&<button type="button" className="agent-storage-notice" onClick={()=>setInfoOpen(true)}>{storageError}</button>}

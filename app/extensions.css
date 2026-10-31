@@ -477,3 +477,9 @@ input[type="range"] { accent-color:var(--ink); padding:0; height:24px; }
  .simulation-table small { font-size:9px; }
  .simulation-curve { height:280px; }
 }
+
+.profile-name { display:flex; align-items:center; gap:8px; text-align:left; max-width:100%; }
+.profile-name strong { min-width:0; }
+.network-identity .location-display { display:inline-flex; text-align:left; font:inherit; color:inherit; max-width:240px; min-width:0; padding:0; }
+.location-display > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media(max-width:760px) { .network-identity .location-display { max-width:180px; } }
